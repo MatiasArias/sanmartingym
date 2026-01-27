@@ -1,0 +1,18 @@
+{
+  "name": "San Martín Gym",
+  "short_name": "SM Gym",
+  "description": "Sistema de entrenamiento para Club San Martín",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FFFFFF",
+  "theme_color": "#E31E24",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
