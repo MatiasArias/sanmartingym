@@ -1,14 +1,23 @@
 #!/usr/bin/env node
 
-import { Redis } from '@upstash/redis';
+import Redis from 'ioredis';
 import { config } from 'dotenv';
 
+// Cargar .env.local por defecto; en producción usar REDIS_URL del sistema
 config({ path: '.env.local' });
 
-const redis = new Redis({
-  url: process.env.UPSTASH_REDIS_REST_URL,
-  token: process.env.UPSTASH_REDIS_REST_TOKEN,
-});
+const redisUrl = process.env.SANMARTIN_REDIS_URL || process.env.REDIS_URL;
+const redis = new Redis(redisUrl);
+
+function set(key, value) {
+  const str = typeof value === 'string' ? value : JSON.stringify(value);
+  return redis.set(key, str);
+}
+
+function lpush(key, ...values) {
+  const strValues = values.map((v) => (typeof v === 'string' ? v : JSON.stringify(v)));
+  return redis.lpush(key, ...strValues);
+}
 
 async function seed() {
   console.log('🌱 Seeding database...\n');
@@ -23,7 +32,7 @@ async function seed() {
   ];
 
   for (const cat of categorias) {
-    await redis.set(`categoria:${cat.id}`, cat);
+    await set(`categoria:${cat.id}`, cat);
   }
 
   // 2. Staff
@@ -39,8 +48,8 @@ async function seed() {
   ];
 
   for (const s of staff) {
-    await redis.set(`usuario:${s.id}`, s);
-    await redis.set(`usuario:dni:${s.dni}`, s);
+    await set(`usuario:${s.id}`, s);
+    await set(`usuario:dni:${s.dni}`, s);
   }
 
   // 3. Jugadores
@@ -60,8 +69,8 @@ async function seed() {
       rol: 'jugador',
       activo: true,
     };
-    await redis.set(`usuario:${usuario.id}`, usuario);
-    await redis.set(`usuario:dni:${usuario.dni}`, usuario);
+    await set(`usuario:${usuario.id}`, usuario);
+    await set(`usuario:dni:${usuario.dni}`, usuario);
   }
 
   // 4. Rutina M17
@@ -74,12 +83,12 @@ async function seed() {
     fecha_fin: '2026-02-13',
   };
 
-  await redis.set(`rutina:${rutinaM17.id}`, rutinaM17);
-  await redis.lpush(`rutinas:categoria:cat-m17`, rutinaM17);
+  await set(`rutina:${rutinaM17.id}`, rutinaM17);
+  await lpush(`rutinas:categoria:cat-m17`, rutinaM17);
 
   // 5. Ejercicios para rutina M17 - POR DÍA
   console.log('🏋️ Creating exercises...');
-  
+
   const ejerciciosPorDia = {
     lunes: [
       { nombre: 'Sentadilla', series: 4, repeticiones: 8, rir: 2, orden: 1 },
@@ -102,20 +111,23 @@ async function seed() {
   for (const [dia, ejercicios] of Object.entries(ejerciciosPorDia)) {
     for (const ej of ejercicios) {
       const ejercicio = {
-        id: `ejercicio-${ejercicioIndex++}`,
+        id: `ejercicio-${ejercicioIndex}`,
         rutina_id: rutinaM17.id,
         dia: dia,
         ...ej,
       };
-      await redis.lpush(`ejercicios:rutina:${rutinaM17.id}`, ejercicio);
+      await set(`ejercicio:${ejercicio.id}`, ejercicio);
+      await lpush(`ejercicios:rutina:${rutinaM17.id}`, ejercicio);
+      ejercicioIndex++;
     }
   }
 
+  await redis.quit();
   console.log('\n✅ Seed completed!');
   console.log('\n📝 Demo users:');
   console.log('   Jugador: 45123456 (Juan Pérez)');
   console.log('   Staff:   20345678 (Lucas Salvador)\n');
-  
+
   process.exit(0);
 }
 
