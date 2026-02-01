@@ -92,7 +92,7 @@ export async function getEjerciciosByRutinaYDia(rutinaId: string, dia: string): 
 
 export async function getDiasDeRutina(rutinaId: string): Promise<string[]> {
   const ejercicios = await getEjerciciosByRutina(rutinaId);
-  const dias = [...new Set(ejercicios.map(e => e.dia))];
+  const dias = Array.from(new Set(ejercicios.map(e => e.dia)));
   const ordenDias = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'];
   return dias.sort((a, b) => ordenDias.indexOf(a.toLowerCase()) - ordenDias.indexOf(b.toLowerCase()));
 }
@@ -104,7 +104,7 @@ export async function getRegistrosByJugador(jugadorId: string): Promise<Registro
 
 export async function getEjerciciosConRegistros(jugadorId: string): Promise<{ ejercicio: Ejercicio; ultimoRegistro: RegistroCarga }[]> {
   const registros = await getRegistrosByJugador(jugadorId);
-  const ejerciciosIds = [...new Set(registros.map(r => r.ejercicio_id))];
+  const ejerciciosIds = Array.from(new Set(registros.map(r => r.ejercicio_id)));
   
   const resultado = [];
   for (const ejId of ejerciciosIds) {

@@ -1,9 +1,9 @@
-import { redis, getEjerciciosByRutina, getDiasDeRutina } from '@/lib/redis';
+import { redis, getEjerciciosByRutina, getDiasDeRutina, type Rutina } from '@/lib/redis';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 
 export default async function RutinaDetailPage({ params }: { params: { id: string } }) {
-  const rutina = await redis.get(`rutina:${params.id}`);
+  const rutina = (await redis.get(`rutina:${params.id}`)) as Rutina | null;
   const ejercicios = await getEjerciciosByRutina(params.id);
   const dias = await getDiasDeRutina(params.id);
 
