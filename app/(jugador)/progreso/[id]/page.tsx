@@ -1,5 +1,5 @@
 import { getTokenPayload } from '@/lib/auth';
-import { getHistorialEjercicio, redis } from '@/lib/redis';
+import { getHistorialEjercicio, redis, type Ejercicio } from '@/lib/redis';
 import { ArrowLeft, TrendingUp, Calendar } from 'lucide-react';
 import Link from 'next/link';
 import { format } from 'date-fns';
@@ -7,7 +7,7 @@ import { es } from 'date-fns/locale';
 
 export default async function HistorialEjercicioPage({ params }: { params: { id: string } }) {
   const payload = await getTokenPayload();
-  const ejercicio = await redis.get(`ejercicio:${params.id}`);
+  const ejercicio = (await redis.get(`ejercicio:${params.id}`)) as Ejercicio | null;
   const historial = await getHistorialEjercicio(payload!.id as string, params.id);
 
   if (!ejercicio) {
