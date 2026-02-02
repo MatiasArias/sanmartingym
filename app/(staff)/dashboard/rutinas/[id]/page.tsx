@@ -1,11 +1,14 @@
-import { redis, getEjerciciosByRutina, getDiasDeRutina, type Rutina } from '@/lib/redis';
-import { ArrowLeft } from 'lucide-react';
+import { getRutinaById, getEjerciciosByRutina, getDiasDeRutina } from '@/lib/redis';
+import { ArrowLeft, Pencil, Trophy, Moon } from 'lucide-react';
 import Link from 'next/link';
 
-export default async function RutinaDetailPage({ params }: { params: { id: string } }) {
-  const rutina = (await redis.get(`rutina:${params.id}`)) as Rutina | null;
-  const ejercicios = await getEjerciciosByRutina(params.id);
-  const dias = await getDiasDeRutina(params.id);
+const diasOrden = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'] as const;
+
+export default async function RutinaDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const rutina = await getRutinaById(id);
+  const ejercicios = await getEjerciciosByRutina(id);
+  const dias = await getDiasDeRutina(id);
 
   if (!rutina) {
     return (
@@ -27,21 +30,44 @@ export default async function RutinaDetailPage({ params }: { params: { id: strin
         Volver
       </Link>
 
-      <div className="bg-white rounded-xl shadow-md p-6">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">{rutina.nombre}</h1>
-        <p className="text-sm text-gray-600">{rutina.fecha_inicio} - {rutina.fecha_fin}</p>
+      <div className="bg-white rounded-xl shadow-md p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">{rutina.nombre}</h1>
+          <p className="text-sm text-gray-600">
+            {rutina.fecha_inicio} - {rutina.fecha_fin}
+            {rutina.semanas && ` • ${rutina.semanas} semanas`}
+          </p>
+        </div>
+        <Link
+          href={`/dashboard/rutinas/${rutina.id}/editar`}
+          className="inline-flex items-center gap-2 px-4 py-2 border border-sanmartin-red text-sanmartin-red rounded-lg hover:bg-red-50 transition font-medium"
+        >
+          <Pencil size={18} />
+          Editar
+        </Link>
       </div>
 
-      {dias.map(dia => {
+      {(rutina.dias_config
+        ? diasOrden.filter((d) => rutina.dias_config![d])
+        : dias.length > 0 ? dias : diasOrden
+      ).map((dia) => {
+        const tipo = rutina.dias_config?.[dia] ?? (ejercicios.some(e => e.dia === dia) ? 'ejercicio' : 'descanso');
         const ejerciciosDia = ejercicios.filter(e => e.dia.toLowerCase() === dia.toLowerCase()).sort((a, b) => a.orden - b.orden);
 
         return (
           <div key={dia} className="bg-white rounded-xl shadow-md p-6">
-            <h2 className="text-lg font-bold text-gray-900 mb-4 capitalize">{dia}</h2>
+            <div className="flex items-center gap-2 mb-4">
+              <h2 className="text-lg font-bold text-gray-900 capitalize">{dia}</h2>
+              {tipo === 'partido' && <span className="text-xs bg-amber-100 text-amber-800 px-2 py-1 rounded-full">Partido</span>}
+              {tipo === 'descanso' && <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full">Descanso</span>}
+            </div>
             
-            {ejerciciosDia.length === 0 ? (
+            {tipo === 'partido' && <p className="text-amber-700 text-sm flex items-center gap-2"><Trophy size={16} /> Día de partido</p>}
+            {tipo === 'descanso' && <p className="text-gray-500 text-sm flex items-center gap-2"><Moon size={16} /> Día de descanso</p>}
+            {tipo === 'ejercicio' && ejerciciosDia.length === 0 && (
               <p className="text-gray-500 text-sm">No hay ejercicios para este día</p>
-            ) : (
+            )}
+            {tipo === 'ejercicio' && ejerciciosDia.length > 0 && (
               <div className="space-y-3">
                 {ejerciciosDia.map((ej, idx) => (
                   <div key={ej.id} className="border border-gray-200 rounded-lg p-4">

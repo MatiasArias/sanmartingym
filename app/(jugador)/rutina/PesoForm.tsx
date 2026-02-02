@@ -1,128 +1,135 @@
 'use client';
 
-import { useState } from 'react';
-import { Plus, Save } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { Check } from 'lucide-react';
+import { getSeriesEstado, setSeriesEstado, type SerieEstado } from '@/lib/rutina-storage';
 
 interface PesoFormProps {
+  rutinaId: string;
+  dia: string;
   ejercicioId: string;
   series: number;
+  repeticiones: number;
+  rir: number;
 }
 
-interface Serie {
-  peso: string;
-  reps: string;
+function estadoInicial(totalSeries: number, repeticiones: number, rir: number): SerieEstado[] {
+  return Array.from({ length: totalSeries }, () => ({
+    completada: false,
+    reps: String(repeticiones),
+    rir: String(rir),
+  }));
 }
 
-export default function PesoForm({ ejercicioId, series: totalSeries }: PesoFormProps) {
-  const [seriesData, setSeriesData] = useState<Serie[]>([{ peso: '', reps: '' }]);
-  const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState('');
+export default function PesoForm({ rutinaId, dia, ejercicioId, series: totalSeries, repeticiones, rir }: PesoFormProps) {
+  const [estado, setEstado] = useState<SerieEstado[]>(() => estadoInicial(totalSeries, repeticiones, rir));
 
-  const agregarSerie = () => {
-    if (seriesData.length < totalSeries) {
-      setSeriesData([...seriesData, { peso: '', reps: '' }]);
+  // Cargar estado guardado una sola vez al montar o al cambiar día/ejercicio
+  useEffect(() => {
+    const stored = getSeriesEstado(rutinaId, dia, ejercicioId, totalSeries);
+    if (stored) {
+      setEstado(stored);
+    } else {
+      setEstado(estadoInicial(totalSeries, repeticiones, rir));
     }
-  };
+  }, [rutinaId, dia, ejercicioId, totalSeries, repeticiones, rir]);
 
-  const actualizarSerie = (index: number, field: 'peso' | 'reps', value: string) => {
-    const nuevasSeries = [...seriesData];
-    nuevasSeries[index][field] = value;
-    setSeriesData(nuevasSeries);
-  };
+  const persistir = useCallback(
+    (nuevo: SerieEstado[]) => {
+      setSeriesEstado(rutinaId, dia, ejercicioId, nuevo);
+    },
+    [rutinaId, dia, ejercicioId]
+  );
 
-  const handleSubmit = async () => {
-    setLoading(true);
-    setMessage('');
-
-    try {
-      // Guardar cada serie
-      for (let i = 0; i < seriesData.length; i++) {
-        const serie = seriesData[i];
-        if (serie.peso && serie.reps) {
-          await fetch('/api/registros', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              ejercicio_id: ejercicioId,
-              peso: parseFloat(serie.peso),
-              reps: parseInt(serie.reps),
-              serie_num: i + 1,
-            }),
-          });
-        }
-      }
-
-      // Marcar asistencia automáticamente
-      await fetch('/api/asistencia', {
-        method: 'POST',
+  const toggleSerie = useCallback(
+    (index: number) => {
+      setEstado((prev) => {
+        const next = prev.map((s, i) => (i === index ? { ...s, completada: !s.completada } : s));
+        persistir(next);
+        return next;
       });
+    },
+    [persistir]
+  );
 
-      setMessage('✅ Guardado y asistencia marcada');
-      setSeriesData([{ peso: '', reps: '' }]);
-      
-      setTimeout(() => setMessage(''), 3000);
-    } catch (error) {
-      setMessage('❌ Error al guardar');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const actualizarReps = useCallback(
+    (index: number, value: string) => {
+      setEstado((prev) => prev.map((s, i) => (i === index ? { ...s, reps: value } : s)));
+    },
+    []
+  );
+
+  const actualizarRir = useCallback(
+    (index: number, value: string) => {
+      setEstado((prev) => prev.map((s, i) => (i === index ? { ...s, rir: value } : s)));
+    },
+    []
+  );
+
+  const guardarAlSalir = useCallback(
+    (index: number) => {
+      setEstado((prev) => {
+        persistir(prev);
+        return prev;
+      });
+    },
+    [persistir]
+  );
+
+  const completadasCount = estado.filter((s) => s.completada).length;
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2">
       <div className="text-sm font-medium text-gray-700 mb-2">
-        Registrar series ({seriesData.length}/{totalSeries})
+        Series ({completadasCount}/{totalSeries})
       </div>
-      
-      {seriesData.map((serie, index) => (
-        <div key={index} className="flex gap-2 items-center">
-          <span className="text-sm font-medium text-gray-500 w-12">#{index + 1}</span>
-          <input
-            type="number"
-            placeholder="KG"
-            value={serie.peso}
-            onChange={(e) => actualizarSerie(index, 'peso', e.target.value)}
-            className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sanmartin-red focus:border-transparent"
-            step="0.5"
-          />
-          <input
-            type="number"
-            placeholder="REPS"
-            value={serie.reps}
-            onChange={(e) => actualizarSerie(index, 'reps', e.target.value)}
-            className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sanmartin-red focus:border-transparent"
-          />
-        </div>
-      ))}
-
-      <div className="flex gap-2">
-        {seriesData.length < totalSeries && (
-          <button
-            onClick={agregarSerie}
-            className="flex-1 flex items-center justify-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-700 py-2 px-4 rounded-lg transition"
+      <ul className="space-y-2">
+        {estado.map((serie, i) => (
+          <li
+            key={i}
+            className={`flex flex-wrap items-center gap-2 py-2 px-3 rounded-lg border ${
+              serie.completada ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'
+            }`}
           >
-            <Plus size={18} />
-            <span>Serie</span>
-          </button>
-        )}
-        
-        <button
-          onClick={handleSubmit}
-          disabled={loading || seriesData.every(s => !s.peso || !s.reps)}
-          className="flex-1 flex items-center justify-center gap-2 bg-sanmartin-red hover:bg-red-700 text-white py-2 px-4 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          <Save size={18} />
-          <span>{loading ? 'Guardando...' : 'Guardar'}</span>
-        </button>
-      </div>
-
-      {message && (
-        <div className={`text-sm text-center py-2 rounded-lg ${
-          message.includes('✅') ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
-        }`}>
-          {message}
-        </div>
-      )}
+            <span className="text-sm font-medium text-gray-600 w-14">Serie {i + 1}</span>
+            <label className="sr-only">Reps</label>
+            <input
+              type="number"
+              min={1}
+              placeholder="Reps"
+              value={serie.reps}
+              onChange={(e) => actualizarReps(i, e.target.value)}
+              onBlur={() => guardarAlSalir(i)}
+              className="w-16 px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-sanmartin-red focus:border-transparent"
+            />
+            <span className="text-sm text-gray-500">reps</span>
+            <label className="sr-only">RIR</label>
+            <input
+              type="number"
+              min={0}
+              placeholder="RIR"
+              value={serie.rir}
+              onChange={(e) => actualizarRir(i, e.target.value)}
+              onBlur={() => guardarAlSalir(i)}
+              className="w-14 px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-sanmartin-red focus:border-transparent"
+            />
+            <span className="text-sm text-gray-500">RIR</span>
+            <button
+              type="button"
+              onClick={() => toggleSerie(i)}
+              className={`ml-auto flex-shrink-0 w-9 h-9 rounded-lg flex items-center justify-center font-medium transition ${
+                serie.completada
+                  ? 'bg-sanmartin-red text-white'
+                  : 'bg-white border border-gray-300 text-gray-500 hover:border-sanmartin-red hover:text-sanmartin-red'
+              }`}
+              aria-label={serie.completada ? 'Marcar como no hecha' : 'Marcar como hecha'}
+              title={serie.completada ? 'Desmarcar' : 'Hecha'}
+            >
+              <Check size={20} strokeWidth={2.5} />
+            </button>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

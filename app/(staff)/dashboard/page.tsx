@@ -56,6 +56,21 @@ export default async function DashboardPage() {
         </Link>
 
         <Link
+          href="/dashboard/jugadores"
+          className="block bg-white p-6 rounded-xl shadow-md hover:shadow-lg transition border-l-4 border-green-500"
+        >
+          <div className="flex items-center gap-4">
+            <div className="bg-green-100 p-3 rounded-full">
+              <Users className="text-green-600" size={24} />
+            </div>
+            <div>
+              <h3 className="font-bold text-gray-900">Cargar Jugadores</h3>
+              <p className="text-sm text-gray-600">DNI, nombre, categoría y fecha de nacimiento</p>
+            </div>
+          </div>
+        </Link>
+
+        <Link
           href="/dashboard/asistencias"
           className="block bg-white p-6 rounded-xl shadow-md hover:shadow-lg transition border-l-4 border-blue-500"
         >

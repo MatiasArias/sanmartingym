@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { GlobalFetchLoading } from "@/components/GlobalFetchLoading";
 
 export const metadata: Metadata = {
   title: "San Martín Gym",
@@ -27,7 +28,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="es">
-      <body>{children}</body>
+      <body>
+        <GlobalFetchLoading />
+        {children}
+      </body>
     </html>
   );
 }

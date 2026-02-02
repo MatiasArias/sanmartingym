@@ -2,6 +2,7 @@ import { getTokenPayload } from '@/lib/auth';
 import { getEjerciciosConRegistros } from '@/lib/redis';
 import Link from 'next/link';
 import { TrendingUp, Dumbbell } from 'lucide-react';
+import CalculadoraPeso from './CalculadoraPeso';
 
 export default async function ProgresoPage() {
   const payload = await getTokenPayload();
@@ -16,6 +17,8 @@ export default async function ProgresoPage() {
         </div>
         <p className="text-gray-600">Historial de ejercicios completados</p>
       </div>
+
+      <CalculadoraPeso />
 
       {ejerciciosConRegistros.length === 0 ? (
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center">
