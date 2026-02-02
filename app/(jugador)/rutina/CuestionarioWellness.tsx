@@ -11,7 +11,12 @@ const PREGUNTAS = [
   { id: 'estres', label: '¿Nivel de estrés o cansancio mental?', low: 'Muy alto', high: 'Bajo' },
 ] as const;
 
-export default function CuestionarioWellness() {
+interface CuestionarioWellnessProps {
+  /** Si está dentro de un modal: al omitir o al enviar con éxito se llama para cerrar */
+  onClose?: () => void;
+}
+
+export default function CuestionarioWellness({ onClose }: CuestionarioWellnessProps) {
   const router = useRouter();
   const [valores, setValores] = useState<Record<string, number>>({
     sueno: 5,
@@ -36,7 +41,8 @@ export default function CuestionarioWellness() {
         body: JSON.stringify(valores),
       });
       if (!res.ok) throw new Error('Error al guardar');
-      router.refresh();
+      await router.refresh();
+      onClose?.();
     } catch {
       setError('Error al guardar. Intentá de nuevo.');
     } finally {
@@ -47,7 +53,10 @@ export default function CuestionarioWellness() {
   const promedio = Object.values(valores).reduce((a, b) => a + b, 0) / Object.keys(valores).length;
   const scoreRedondeado = Math.round(promedio * 10) / 10;
 
-  const handleOmitir = () => router.refresh();
+  const handleOmitir = () => {
+    if (onClose) onClose();
+    else router.refresh();
+  };
 
   return (
     <div className="bg-white rounded-xl shadow-md p-6 border-l-4 border-sanmartin-red">
@@ -99,7 +108,7 @@ export default function CuestionarioWellness() {
               onClick={handleOmitir}
               className="flex-1 py-3 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200"
             >
-              Omitir — ver rutina
+              {onClose ? 'Cerrar' : 'Omitir — ver rutina'}
             </button>
             <button
               type="button"

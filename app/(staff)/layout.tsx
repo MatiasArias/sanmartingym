@@ -4,6 +4,7 @@ import { LayoutDashboard, Users, UserPlus, ClipboardList, Dumbbell } from 'lucid
 import Link from 'next/link';
 import { getUsuarioById } from '@/lib/redis';
 import Image from 'next/image';
+import { LogoutButton } from './LogoutButton';
 
 export default async function StaffLayout({
   children,
@@ -30,6 +31,7 @@ export default async function StaffLayout({
               <p className="text-xs text-gray-300">{usuario?.nombre}</p>
             </div>
           </div>
+          <LogoutButton />
         </div>
       </header>
 

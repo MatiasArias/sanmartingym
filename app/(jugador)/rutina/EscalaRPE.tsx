@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Activity } from 'lucide-react';
+import { getRPEFromStorage, setRPEInStorage } from '@/lib/rutina-storage';
 
 interface EscalaRPEProps {
   rutinaId: string;
@@ -25,6 +26,17 @@ export default function EscalaRPE({ rutinaId, dia }: EscalaRPEProps) {
   const [rpe, setRpe] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
+
+  // Cargar RPE guardado una sola vez al montar o al cambiar día
+  useEffect(() => {
+    const stored = getRPEFromStorage(rutinaId, dia);
+    setRpe(stored);
+  }, [rutinaId, dia]);
+
+  const selectRPE = (n: number) => {
+    setRpe(n);
+    setRPEInStorage(rutinaId, dia, n);
+  };
 
   const handleSubmit = async () => {
     if (rpe == null) return;
@@ -60,7 +72,7 @@ export default function EscalaRPE({ rutinaId, dia }: EscalaRPEProps) {
           <button
             key={n}
             type="button"
-            onClick={() => setRpe(n)}
+            onClick={() => selectRPE(n)}
             className={`w-10 h-10 rounded-lg font-semibold transition ${
               rpe === n
                 ? 'bg-sanmartin-red text-white'

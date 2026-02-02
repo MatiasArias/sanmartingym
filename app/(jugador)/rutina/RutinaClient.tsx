@@ -1,10 +1,12 @@
 'use client';
 
+import { useState } from 'react';
 import { Rutina, EjercicioConAyuda } from '@/lib/redis';
 import DiaSelector from './DiaSelector';
 import PesoForm from './PesoForm';
 import EscalaRPE from './EscalaRPE';
 import CuestionarioWellness from './CuestionarioWellness';
+import { Heart, X } from 'lucide-react';
 
 interface RutinaClientProps {
   rutina: Rutina;
@@ -19,15 +21,52 @@ interface RutinaClientProps {
 }
 
 export default function RutinaClient({ rutina, ejercicios, dias, diaActual, semanaActual, sugerenciasPeso = {}, wellnessScore = null, wellnessBajo = false }: RutinaClientProps) {
+  const [showWellnessModal, setShowWellnessModal] = useState(false);
+
   return (
     <div className="p-4 space-y-4">
-      {/* Cuestionario Wellness opcional: arriba del encabezado de la rutina */}
+      {/* Botón para abrir cuestionario Wellness (opcional) o mostrar score si ya completó */}
       {wellnessScore == null ? (
-        <CuestionarioWellness />
+        <button
+          type="button"
+          onClick={() => setShowWellnessModal(true)}
+          className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-medium transition border border-gray-200"
+        >
+          <Heart className="text-sanmartin-red" size={20} />
+          Completar cuestionario Wellness (opcional)
+        </button>
       ) : (
         <p className="text-sm text-gray-600 bg-gray-50 rounded-lg px-3 py-2">
           Wellness hoy: <strong className="text-sanmartin-red">{wellnessScore}/10</strong>
         </p>
+      )}
+
+      {/* Modal Wellness: solo visible cuando el usuario elige completarlo */}
+      {showWellnessModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50"
+          onClick={() => setShowWellnessModal(false)}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="wellness-modal-title"
+        >
+          <div
+            className="bg-white rounded-2xl shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto relative"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={() => setShowWellnessModal(false)}
+              className="absolute top-3 right-3 p-1 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100"
+              aria-label="Cerrar"
+            >
+              <X size={24} />
+            </button>
+            <div className="p-6 pt-10">
+              <CuestionarioWellness onClose={() => setShowWellnessModal(false)} />
+            </div>
+          </div>
+        </div>
       )}
 
       <div className="bg-white rounded-xl shadow-md p-6">
@@ -81,7 +120,7 @@ export default function RutinaClient({ rutina, ejercicios, dias, diaActual, sema
                   📝 {ejercicio.nota_semana}
                 </p>
               )}
-              <PesoForm ejercicioId={ejercicio.id} series={ejercicio.series} />
+              <PesoForm rutinaId={rutina.id} dia={diaActual} ejercicioId={ejercicio.id} series={ejercicio.series} repeticiones={ejercicio.repeticiones} rir={ejercicio.rir} />
             </div>
           ))
         )}
