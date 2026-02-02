@@ -2,11 +2,13 @@ import { getRutinaById, getEjerciciosByRutina, getDiasDeRutina } from '@/lib/red
 import { ArrowLeft, Pencil, Trophy, Moon } from 'lucide-react';
 import Link from 'next/link';
 
+const diasOrden = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'] as const;
+
 export default async function RutinaDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const rutina = await getRutinaById(id);
-  const ejercicios = await getEjerciciosByRutina(params.id);
-  const dias = await getDiasDeRutina(params.id);
+  const ejercicios = await getEjerciciosByRutina(id);
+  const dias = await getDiasDeRutina(id);
 
   if (!rutina) {
     return (
