@@ -1,6 +1,6 @@
 import { getTokenPayload } from '@/lib/auth';
 import { redirect } from 'next/navigation';
-import { LayoutDashboard, Users, ClipboardList } from 'lucide-react';
+import { LayoutDashboard, Users, UserPlus, ClipboardList, Dumbbell } from 'lucide-react';
 import Link from 'next/link';
 import { getUsuarioById } from '@/lib/redis';
 import Image from 'next/image';
@@ -38,10 +38,12 @@ export default async function StaffLayout({
 
       {/* Bottom Navigation */}
       <nav className="fixed bottom-0 left-0 right-0 bg-sanmartin-black border-t border-gray-700 pb-safe">
-        <div className="grid grid-cols-3 gap-1 px-2 py-2">
-          <NavLink href="/dashboard" icon={<LayoutDashboard size={20} />} label="Dashboard" />
-          <NavLink href="/dashboard/rutinas" icon={<ClipboardList size={20} />} label="Rutinas" />
-          <NavLink href="/dashboard/asistencias" icon={<Users size={20} />} label="Asistencia" />
+        <div className="grid grid-cols-5 gap-0.5 px-1 py-2">
+          <NavLink href="/dashboard" icon={<LayoutDashboard size={18} />} label="Inicio" />
+          <NavLink href="/dashboard/jugadores" icon={<UserPlus size={18} />} label="Jugadores" />
+          <NavLink href="/dashboard/ejercicios" icon={<Dumbbell size={18} />} label="Ejercicios" />
+          <NavLink href="/dashboard/rutinas" icon={<ClipboardList size={18} />} label="Rutinas" />
+          <NavLink href="/dashboard/asistencias" icon={<Users size={18} />} label="Asistencia" />
         </div>
       </nav>
     </div>

@@ -11,6 +11,7 @@ interface Asistencia {
     categoria_id: string;
   };
   presente: boolean;
+  rpe: number | null;
 }
 
 export default function AsistenciasPage() {
@@ -130,12 +131,17 @@ export default function AsistenciasPage() {
         ) : (
           <div className="divide-y divide-gray-200">
             {asistencias.map(asistencia => (
-              <div key={asistencia.jugador.id} className="p-4 flex items-center justify-between">
+              <div key={asistencia.jugador.id} className="p-4 flex items-center justify-between gap-3">
                 <div>
                   <p className="font-semibold text-gray-900">{asistencia.jugador.nombre}</p>
                   <p className="text-sm text-gray-600">DNI: {asistencia.jugador.dni}</p>
                 </div>
-                <div>
+                <div className="flex items-center gap-3">
+                  {asistencia.rpe != null && (
+                    <span className="text-xs font-medium bg-gray-100 text-gray-700 px-2 py-1 rounded" title="RPE (esfuerzo percibido)">
+                      RPE {asistencia.rpe}
+                    </span>
+                  )}
                   {asistencia.presente ? (
                     <div className="flex items-center gap-2 text-green-600">
                       <CheckCircle size={20} />

@@ -29,16 +29,18 @@ En Vercel puedes usar **SANMARTIN_REDIS_URL** (o **REDIS_URL**); la app acepta c
 
 ## Datos de prueba (seed)
 
-Para tener usuarios y rutinas de ejemplo:
+Para tener usuarios, rutinas y progreso de ejemplo:
 
 ```bash
 npm run seed
 ```
 
-Usa `REDIS_URL` de `.env.local`. Usuarios de prueba:
+Usa `REDIS_URL` (o `SANMARTIN_REDIS_URL`) de `.env.local`. Incluye:
 
-- **Jugador:** DNI `45123456` (Juan Pérez)
-- **Staff:** DNI `20345678` (Lucas Salvador)
+- **10 ejercicios** (plantillas + ejercicios en rutina M17): Sentadilla, Press Banca, Remo, Peso Muerto, Press Militar, Dominadas, Sentadilla Frontal, Press Inclinado, Peso Muerto Rumano, Curl de Bíceps.
+- **Rutina activa:** "Fuerza - Semana 1" (2026-01-13 a 2026-02-13).
+- **Juan Pérez** (DNI `45123456`) con **un mes de progreso**: 10 asistencias y registros de carga (peso/reps) en lunes, miércoles y viernes.
+- **Staff:** DNI `20345678` (Lucas Salvador).
 
 ## Despliegue (Vercel, etc.)
 

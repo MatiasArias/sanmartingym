@@ -1,0 +1,92 @@
+'use client';
+
+import { useState } from 'react';
+import { Activity } from 'lucide-react';
+
+interface EscalaRPEProps {
+  rutinaId: string;
+  dia: string;
+}
+
+const RPE_LABELS: Record<number, string> = {
+  1: 'Muy fácil',
+  2: 'Fácil',
+  3: 'Moderado',
+  4: 'Algo duro',
+  5: 'Duro',
+  6: 'Muy duro',
+  7: 'Muy muy duro',
+  8: 'Extremo',
+  9: 'Casi máximo',
+  10: 'Máximo',
+};
+
+export default function EscalaRPE({ rutinaId, dia }: EscalaRPEProps) {
+  const [rpe, setRpe] = useState<number | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState('');
+
+  const handleSubmit = async () => {
+    if (rpe == null) return;
+    setLoading(true);
+    setMessage('');
+    try {
+      const res = await fetch('/api/rpe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rpe, rutina_id: rutinaId, dia }),
+      });
+      if (!res.ok) throw new Error('Error');
+      setMessage('✅ Guardado. Gracias por marcar tu esfuerzo.');
+      setTimeout(() => setMessage(''), 3000);
+    } catch {
+      setMessage('❌ Error al guardar');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="bg-white rounded-xl shadow-md p-6 border-l-4 border-sanmartin-red">
+      <h3 className="font-bold text-gray-900 flex items-center gap-2 mb-2">
+        <Activity className="text-sanmartin-red" size={20} />
+        Escala RPE – ¿Qué tan cansado estuviste?
+      </h3>
+      <p className="text-sm text-gray-600 mb-4">
+        Marcá del 1 al 10 cuánto te costó la rutina (1 = muy fácil, 10 = máximo esfuerzo).
+      </p>
+      <div className="flex flex-wrap gap-2 mb-4">
+        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
+          <button
+            key={n}
+            type="button"
+            onClick={() => setRpe(n)}
+            className={`w-10 h-10 rounded-lg font-semibold transition ${
+              rpe === n
+                ? 'bg-sanmartin-red text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            {n}
+          </button>
+        ))}
+      </div>
+      {rpe != null && (
+        <p className="text-sm text-gray-500 mb-3">{RPE_LABELS[rpe]}</p>
+      )}
+      <button
+        type="button"
+        onClick={handleSubmit}
+        disabled={loading || rpe == null}
+        className="w-full py-2 bg-sanmartin-red text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+      >
+        {loading ? 'Guardando...' : 'Guardar RPE'}
+      </button>
+      {message && (
+        <p className={`text-sm mt-3 ${message.includes('✅') ? 'text-green-600' : 'text-red-600'}`}>
+          {message}
+        </p>
+      )}
+    </div>
+  );
+}

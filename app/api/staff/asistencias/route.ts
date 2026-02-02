@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getTokenPayload } from '@/lib/auth';
-import { getAllUsuarios, redis } from '@/lib/redis';
+import { getAllUsuarios, redis, getRpeSesion } from '@/lib/redis';
 
 export async function GET(request: NextRequest) {
   try {
@@ -22,9 +22,11 @@ export async function GET(request: NextRequest) {
     const asistencias = await Promise.all(
       jugadores.map(async (j) => {
         const asistencia = await redis.get(`asistencia:${j.id}:${fecha}`);
+        const rpeSesion = await getRpeSesion(j.id, fecha);
         return {
           jugador: j,
           presente: !!asistencia,
+          rpe: rpeSesion?.rpe ?? null,
         };
       })
     );
