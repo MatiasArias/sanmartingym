@@ -9,11 +9,12 @@ export function keySeriesEstado(rutinaId: string, dia: string, ejercicioId: stri
   return `${PREFIX}:${rutinaId}:${dia}:ejercicio:${ejercicioId}:estado`;
 }
 
-/** Estado de una serie: completada + reps y RIR editables por el jugador. */
+/** Estado de una serie: completada + reps, RIR y peso editables por el jugador (peso para historial). */
 export interface SerieEstado {
   completada: boolean;
   reps: string;
   rir: string;
+  peso: string;
 }
 
 export function keyRPE(rutinaId: string, dia: string): string {
@@ -28,11 +29,15 @@ export function getSeriesEstado(rutinaId: string, dia: string, ejercicioId: stri
     if (!raw) return null;
     const parsed = JSON.parse(raw) as unknown;
     if (!Array.isArray(parsed) || parsed.length !== totalSeries) return null;
-    const ok = parsed.every(
-      (s) =>
-        s && typeof s === 'object' && typeof (s as SerieEstado).completada === 'boolean' && typeof (s as SerieEstado).reps === 'string' && typeof (s as SerieEstado).rir === 'string'
-    );
-    return ok ? (parsed as SerieEstado[]) : null;
+    const ok = parsed.every((s) => {
+      if (!s || typeof s !== 'object') return false;
+      const se = s as Record<string, unknown>;
+      if (typeof se.completada !== 'boolean' || typeof se.reps !== 'string' || typeof se.rir !== 'string') return false;
+      if (se.peso !== undefined && typeof se.peso !== 'string') return false;
+      return true;
+    });
+    if (!ok) return null;
+    return (parsed as SerieEstado[]).map((s) => ({ ...s, peso: typeof s.peso === 'string' ? s.peso : '' }));
   } catch {
     return null;
   }

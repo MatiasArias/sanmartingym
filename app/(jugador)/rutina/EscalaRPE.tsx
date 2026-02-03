@@ -1,12 +1,19 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Activity } from 'lucide-react';
-import { getRPEFromStorage, setRPEInStorage } from '@/lib/rutina-storage';
+import { getRPEFromStorage, setRPEInStorage, getSeriesEstado } from '@/lib/rutina-storage';
+
+interface EjercicioParaHistorial {
+  id: string;
+  series: number;
+}
 
 interface EscalaRPEProps {
   rutinaId: string;
   dia: string;
+  ejercicios: EjercicioParaHistorial[];
 }
 
 const RPE_LABELS: Record<number, string> = {
@@ -22,7 +29,8 @@ const RPE_LABELS: Record<number, string> = {
   10: 'Máximo',
 };
 
-export default function EscalaRPE({ rutinaId, dia }: EscalaRPEProps) {
+export default function EscalaRPE({ rutinaId, dia, ejercicios }: EscalaRPEProps) {
+  const router = useRouter();
   const [rpe, setRpe] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
@@ -49,8 +57,33 @@ export default function EscalaRPE({ rutinaId, dia }: EscalaRPEProps) {
         body: JSON.stringify({ rpe, rutina_id: rutinaId, dia }),
       });
       if (!res.ok) throw new Error('Error');
-      setMessage('✅ Guardado. Gracias por marcar tu esfuerzo.');
-      setTimeout(() => setMessage(''), 3000);
+
+      // Recolectar registros de la sesión (desde localStorage) y guardar como sesión única por día
+      const registros: { ejercicio_id: string; peso: number; reps: number; serie_num: number }[] = [];
+      for (const ej of ejercicios) {
+        const estado = getSeriesEstado(rutinaId, dia, ej.id, ej.series);
+        if (!estado) continue;
+        for (let i = 0; i < estado.length; i++) {
+          const s = estado[i];
+          const peso = s.peso.trim() ? parseFloat(s.peso) : NaN;
+          const reps = s.reps.trim() ? parseInt(s.reps, 10) : NaN;
+          if (Number.isFinite(peso) && Number.isFinite(reps)) {
+            registros.push({ ejercicio_id: ej.id, peso, reps, serie_num: i + 1 });
+          }
+        }
+      }
+      if (registros.length > 0) {
+        const hoy = new Date().toISOString().split('T')[0];
+        await fetch('/api/registros/sesion', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ registros, fecha: hoy }),
+        });
+      }
+      await fetch('/api/asistencia', { method: 'POST' });
+
+      setMessage('✅ Guardado. Redirigiendo al inicio...');
+      router.push('/home');
     } catch {
       setMessage('❌ Error al guardar');
     } finally {
@@ -92,7 +125,7 @@ export default function EscalaRPE({ rutinaId, dia }: EscalaRPEProps) {
         disabled={loading || rpe == null}
         className="w-full py-2 bg-sanmartin-red text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
       >
-        {loading ? 'Guardando...' : 'Guardar RPE'}
+        {loading ? 'Guardando...' : 'Finalizar jornada'}
       </button>
       {message && (
         <p className={`text-sm mt-3 ${message.includes('✅') ? 'text-green-600' : 'text-red-600'}`}>

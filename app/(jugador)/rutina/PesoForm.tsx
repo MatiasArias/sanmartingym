@@ -18,6 +18,7 @@ function estadoInicial(totalSeries: number, repeticiones: number, rir: number): 
     completada: false,
     reps: String(repeticiones),
     rir: String(rir),
+    peso: '',
   }));
 }
 
@@ -66,6 +67,13 @@ export default function PesoForm({ rutinaId, dia, ejercicioId, series: totalSeri
     []
   );
 
+  const actualizarPeso = useCallback(
+    (index: number, value: string) => {
+      setEstado((prev) => prev.map((s, i) => (i === index ? { ...s, peso: value } : s)));
+    },
+    []
+  );
+
   const guardarAlSalir = useCallback(
     (index: number) => {
       setEstado((prev) => {
@@ -92,6 +100,18 @@ export default function PesoForm({ rutinaId, dia, ejercicioId, series: totalSeri
             }`}
           >
             <span className="text-sm font-medium text-gray-600 w-14">Serie {i + 1}</span>
+            <label className="sr-only">Peso (kg)</label>
+            <input
+              type="number"
+              min={0}
+              step={0.5}
+              placeholder="Kg"
+              value={serie.peso}
+              onChange={(e) => actualizarPeso(i, e.target.value)}
+              onBlur={() => guardarAlSalir(i)}
+              className="w-14 px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-sanmartin-red focus:border-transparent"
+            />
+            <span className="text-sm text-gray-500">kg</span>
             <label className="sr-only">Reps</label>
             <input
               type="number"

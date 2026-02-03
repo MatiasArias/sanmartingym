@@ -504,3 +504,42 @@ export async function saveEjerciciosForRutina(
 
   return saved;
 }
+
+// --- Comentarios de ejercicios (jugadores envían, staff los ve) ---
+export interface ComentarioEjercicio {
+  id: string;
+  ejercicio_id: string;
+  texto: string;
+  timestamp: string;
+  anonimo: boolean;
+  /** Nombre del jugador cuando anonimo=false */
+  usuario_nombre?: string;
+}
+
+const COMENTARIOS_KEY_PREFIX = 'comentarios:ejercicio:';
+
+export async function addComentarioEjercicio(data: Omit<ComentarioEjercicio, 'id'> & { anonimo: boolean; usuario_nombre?: string }): Promise<ComentarioEjercicio> {
+  const comentario: ComentarioEjercicio = {
+    ...data,
+    id: `comentario-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+  };
+  const key = `${COMENTARIOS_KEY_PREFIX}${data.ejercicio_id}`;
+  await redis.lpush(key, comentario);
+  return comentario;
+}
+
+export async function getComentariosByEjercicio(ejercicioId: string): Promise<ComentarioEjercicio[]> {
+  const key = `${COMENTARIOS_KEY_PREFIX}${ejercicioId}`;
+  const comentarios = (await redis.lrange(key, 0, -1)) as ComentarioEjercicio[];
+  return (comentarios || []).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+}
+
+export async function getComentariosByEjercicios(ejercicioIds: string[]): Promise<Record<string, ComentarioEjercicio[]>> {
+  const result: Record<string, ComentarioEjercicio[]> = {};
+  await Promise.all(
+    ejercicioIds.map(async (id) => {
+      result[id] = await getComentariosByEjercicio(id);
+    })
+  );
+  return result;
+}

@@ -1,6 +1,7 @@
-import { getRutinaById, getEjerciciosByRutina, getDiasDeRutina } from '@/lib/redis';
-import { ArrowLeft, Pencil, Trophy, Moon } from 'lucide-react';
+import { getRutinaById, getEjerciciosByRutina, getDiasDeRutina, getComentariosByEjercicios } from '@/lib/redis';
+import { ArrowLeft, Pencil, Trophy, Moon, MessageSquare } from 'lucide-react';
 import Link from 'next/link';
+import AgregarComentarioForm from '../AgregarComentarioForm';
 
 const diasOrden = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'] as const;
 
@@ -9,6 +10,8 @@ export default async function RutinaDetailPage({ params }: { params: Promise<{ i
   const rutina = await getRutinaById(id);
   const ejercicios = await getEjerciciosByRutina(id);
   const dias = await getDiasDeRutina(id);
+  const ejercicioIds = ejercicios.map((e) => e.id);
+  const comentariosPorEjercicio = await getComentariosByEjercicios(ejercicioIds);
 
   if (!rutina) {
     return (
@@ -69,25 +72,53 @@ export default async function RutinaDetailPage({ params }: { params: Promise<{ i
             )}
             {tipo === 'ejercicio' && ejerciciosDia.length > 0 && (
               <div className="space-y-3">
-                {ejerciciosDia.map((ej, idx) => (
-                  <div key={ej.id} className="border border-gray-200 rounded-lg p-4">
-                    <div className="flex items-start gap-3">
-                      <span className="bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-sm font-semibold">
-                        {idx + 1}
-                      </span>
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-gray-900 mb-1">{ej.nombre}</h3>
-                        <div className="flex gap-4 text-sm text-gray-600">
-                          <span>{ej.series} series</span>
-                          <span>•</span>
-                          <span>{ej.repeticiones} reps</span>
-                          <span>•</span>
-                          <span>RIR {ej.rir}</span>
+                {ejerciciosDia.map((ej, idx) => {
+                  const comentarios = comentariosPorEjercicio[ej.id] || [];
+                  return (
+                    <div key={ej.id} className="border border-gray-200 rounded-lg p-4">
+                      <div className="flex items-start gap-3">
+                        <span className="bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-sm font-semibold">
+                          {idx + 1}
+                        </span>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-semibold text-gray-900 mb-1">{ej.nombre}</h3>
+                          <div className="flex gap-4 text-sm text-gray-600">
+                            <span>{ej.series} series</span>
+                            <span>•</span>
+                            <span>{ej.repeticiones} reps</span>
+                            <span>•</span>
+                            <span>RIR {ej.rir}</span>
+                          </div>
+                          <div className="mt-3 pt-3 border-t border-gray-100">
+                              <div className="flex items-center gap-1.5 text-sm text-gray-600 mb-1">
+                                <MessageSquare size={14} className="text-sanmartin-red" />
+                                <span className="font-medium">Comentarios ({comentarios.length})</span>
+                              </div>
+                              {comentarios.length > 0 && (
+                                <div className="space-y-1.5 mb-2">
+                                  {comentarios.map((c) => (
+                                    <div key={c.id} className="text-sm bg-gray-50 rounded px-2 py-1.5 border border-gray-100">
+                                      <p className="text-gray-800">{c.texto}</p>
+                                      <p className="text-xs text-gray-400">
+                                        {new Date(c.timestamp).toLocaleDateString('es-AR', {
+                                          day: 'numeric',
+                                          month: 'short',
+                                          hour: '2-digit',
+                                          minute: '2-digit',
+                                        })}{' '}
+                                        • {c.anonimo ? 'Anónimo' : (c.usuario_nombre ?? 'Jugador')}
+                                      </p>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                              <AgregarComentarioForm ejercicioId={ej.id} ejercicioNombre={ej.nombre} />
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>

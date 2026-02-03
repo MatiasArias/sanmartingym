@@ -2,16 +2,27 @@
 
 import { useEffect, useState, useCallback } from 'react';
 
-function isApiRequest(input: RequestInfo | URL): boolean {
-  let url: string;
-  if (typeof input === 'string') {
-    url = input;
-  } else if (input instanceof URL) {
-    url = input.pathname;
-  } else {
-    url = input.url;
+function getRequestUrl(input: RequestInfo | URL): string {
+  if (typeof input === 'string') return input;
+  if (input instanceof URL) return input.href;
+  return input.url;
+}
+
+function shouldShowLoading(input: RequestInfo | URL): boolean {
+  const url = getRequestUrl(input);
+  try {
+    const parsed = new URL(url, typeof window !== 'undefined' ? window.location.origin : 'http://localhost');
+    // Solo peticiones al mismo origen
+    if (typeof window !== 'undefined' && parsed.origin !== window.location.origin) return false;
+    const path = parsed.pathname;
+    // Excluir solo chunks estáticos (JS, CSS, etc.)
+    if (path.startsWith('/_next/static/')) return false;
+    if (/\.(js|css|woff2?|ico|png|jpg|jpeg|gif|svg|webp)(\?|$)/.test(path)) return false;
+    // Incluir: /api/*, rutas de navegación (/, /home, /rutina) y payloads RSC (/_next/data/...)
+    return path.startsWith('/api/') || path.startsWith('/_next/data/') || (!path.startsWith('/_next/') && !path.includes('.'));
+  } catch {
+    return false;
   }
-  return url.includes('/api/');
 }
 
 export function GlobalFetchLoading() {
@@ -25,14 +36,14 @@ export function GlobalFetchLoading() {
     const originalFetch = window.fetch;
 
     window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
-      const isApi = isApiRequest(input);
-      if (isApi) increment();
+      const show = shouldShowLoading(input);
+      if (show) increment();
 
       try {
         const response = await originalFetch(input, init);
         return response;
       } finally {
-        if (isApi) decrement();
+        if (show) decrement();
       }
     };
 

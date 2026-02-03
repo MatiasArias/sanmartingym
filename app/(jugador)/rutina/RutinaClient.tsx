@@ -129,7 +129,7 @@ export default function RutinaClient({ rutina, ejercicios, dias, diaActual, sema
       {/* Escala RPE al final de la rutina */}
       {ejercicios.length > 0 && (
         <div className="mt-6">
-          <EscalaRPE rutinaId={rutina.id} dia={diaActual} />
+          <EscalaRPE rutinaId={rutina.id} dia={diaActual} ejercicios={ejercicios.map((e) => ({ id: e.id, series: e.series }))} />
         </div>
       )}
     </div>
