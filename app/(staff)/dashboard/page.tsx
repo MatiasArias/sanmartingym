@@ -1,6 +1,6 @@
 import { getTokenPayload } from '@/lib/auth';
 import { getUsuarioById, getAllRutinas, getAllUsuarios, getComentariosNuevosCount } from '@/lib/redis';
-import { ClipboardList, Users, MessageSquare } from 'lucide-react';
+import { ClipboardList, Users, MessageSquare, Heart, History } from 'lucide-react';
 import Link from 'next/link';
 
 export default async function DashboardPage() {
@@ -60,6 +60,21 @@ export default async function DashboardPage() {
       {/* Quick Actions */}
       <div className="space-y-4">
         <Link
+          href="/dashboard/comentarios"
+          className="block bg-white p-6 rounded-xl shadow-md hover:shadow-lg transition border-l-4 border-amber-500"
+        >
+          <div className="flex items-center gap-4">
+            <div className="bg-amber-100 p-3 rounded-full">
+              <History className="text-amber-600" size={24} />
+            </div>
+            <div>
+              <h3 className="font-bold text-gray-900">Histórico de comentarios</h3>
+              <p className="text-sm text-gray-600">Ver comentarios resueltos de jugadores</p>
+            </div>
+          </div>
+        </Link>
+
+        <Link
           href="/dashboard/rutinas"
           className="block bg-white p-6 rounded-xl shadow-md hover:shadow-lg transition border-l-4 border-sanmartin-red"
         >
@@ -100,6 +115,21 @@ export default async function DashboardPage() {
             <div>
               <h3 className="font-bold text-gray-900">Control de Asistencias</h3>
               <p className="text-sm text-gray-600">Ver asistencias por fecha y categoría</p>
+            </div>
+          </div>
+        </Link>
+
+        <Link
+          href="/dashboard/wellness"
+          className="block bg-white p-6 rounded-xl shadow-md hover:shadow-lg transition border-l-4 border-sanmartin-red"
+        >
+          <div className="flex items-center gap-4">
+            <div className="bg-red-100 p-3 rounded-full">
+              <Heart className="text-sanmartin-red" size={24} />
+            </div>
+            <div>
+              <h3 className="font-bold text-gray-900">Reglas Wellness</h3>
+              <p className="text-sm text-gray-600">Definir adaptación de rutina (bienestar &lt; 2 → quitar 1 rep, cansancio &lt; 2 → quitar 1 serie)</p>
             </div>
           </div>
         </Link>

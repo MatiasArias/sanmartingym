@@ -7,7 +7,7 @@ import {
 } from '@/lib/redis';
 import { z } from 'zod';
 
-const TIPOS = ['empuje', 'traccion'] as const;
+const TIPOS = ['empuje', 'traccion', 'movilidad'] as const;
 const MODOS_SERIE = ['serie_x_repeticion', 'serie_x_minutos', 'serie_x_brazo'] as const;
 
 const bodySchema = z.object({

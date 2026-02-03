@@ -6,6 +6,7 @@ import type { EjercicioPlantilla } from '@/lib/redis';
 const TIPO_LABEL: Record<string, string> = {
   empuje: 'Empuje',
   traccion: 'Tracción',
+  movilidad: 'Movilidad / Activación',
 };
 
 const MODO_LABEL: Record<string, string> = {

@@ -2,7 +2,17 @@
 
 Especificación modular del proyecto.
 
-## Índice
+## Documento Maestro
+
+### [SPECS-COMPLETAS.md](./SPECS-COMPLETAS.md)
+Especificaciones completas y consolidadas:
+- **Funcionales**: requisitos detallados por módulo (auth, jugadores, ejercicios, rutinas, asistencia, progreso)
+- **No funcionales**: rendimiento, usabilidad, seguridad, tecnología
+- **User Stories**: historias de usuario con criterios de aceptación
+
+---
+
+## Índice de Specs Modulares
 
 ### 00. [Overview](./00-overview.md)
 Contexto general, stack y deployment.

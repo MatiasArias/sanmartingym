@@ -7,6 +7,7 @@ import type { EjercicioPlantilla } from '@/lib/redis';
 const TIPOS = [
   { value: 'empuje', label: 'Empuje' },
   { value: 'traccion', label: 'Tracción' },
+  { value: 'movilidad', label: 'Movilidad / Activación' },
 ];
 
 const MODOS_SERIE = [
@@ -35,7 +36,9 @@ export default function EjercicioForm({ ejercicio }: EjercicioFormProps) {
   const [repeticionesDefault, setRepeticionesDefault] = useState(
     ejercicio?.repeticiones_default ?? 10
   );
-  const [tipo, setTipo] = useState<'empuje' | 'traccion'>(ejercicio?.tipo ?? 'empuje');
+  const [tipo, setTipo] = useState<'empuje' | 'traccion' | 'movilidad'>(
+    ejercicio?.tipo ?? 'empuje'
+  );
   const [musculoPrincipal, setMusculoPrincipal] = useState(
     ejercicio?.musculo_principal ?? MUSCULOS[0]
   );
@@ -159,7 +162,7 @@ export default function EjercicioForm({ ejercicio }: EjercicioFormProps) {
           <label className="block text-sm font-medium text-gray-700 mb-1">Tipo de ejercicio</label>
           <select
             value={tipo}
-            onChange={(e) => setTipo(e.target.value as 'empuje' | 'traccion')}
+            onChange={(e) => setTipo(e.target.value as 'empuje' | 'traccion' | 'movilidad')}
             className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-sanmartin-red focus:border-transparent"
           >
             {TIPOS.map((t) => (

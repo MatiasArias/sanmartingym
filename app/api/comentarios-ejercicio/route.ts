@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getTokenPayload } from '@/lib/auth';
-import { addComentarioEjercicio, getComentariosByEjercicio } from '@/lib/redis';
+import { addComentarioEjercicio, getComentariosByEjercicio, getUsuarioById } from '@/lib/redis';
 import { z } from 'zod';
 
 const comentarioSchema = z.object({
@@ -30,21 +30,28 @@ export async function GET(request: NextRequest) {
   }
 }
 
-/** POST: Crear comentario. Solo staff (para registrar feedback de jugadores). */
+/** POST: Crear comentario. Jugadores (desde rutina) y staff pueden agregar. */
 export async function POST(request: NextRequest) {
   try {
     const payload = await getTokenPayload();
-    if (!payload || payload.rol !== 'staff') {
-      return NextResponse.json({ error: 'Solo el staff puede agregar comentarios' }, { status: 403 });
+    if (!payload) {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+    }
+    if (payload.rol !== 'jugador' && payload.rol !== 'staff') {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
     }
 
     const body = await request.json();
     const data = comentarioSchema.parse(body);
 
-    // Staff puede indicar nombre (ej: jugador que reportó) o anónimo
     let usuario_nombre: string | undefined;
-    if (!data.anonimo && body.usuario_nombre) {
-      usuario_nombre = body.usuario_nombre as string;
+    if (!data.anonimo) {
+      if (payload.rol === 'jugador') {
+        const usuario = await getUsuarioById(payload.id as string);
+        usuario_nombre = usuario?.nombre;
+      } else {
+        usuario_nombre = (body.usuario_nombre as string) || undefined;
+      }
     }
 
     const comentario = await addComentarioEjercicio({

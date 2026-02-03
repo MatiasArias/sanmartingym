@@ -19,10 +19,10 @@ interface CuestionarioWellnessProps {
 export default function CuestionarioWellness({ onClose }: CuestionarioWellnessProps) {
   const router = useRouter();
   const [valores, setValores] = useState<Record<string, number>>({
-    sueno: 5,
-    energia: 5,
-    dolor_muscular: 5,
-    estres: 5,
+    sueno: 3,
+    energia: 3,
+    dolor_muscular: 3,
+    estres: 3,
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -52,6 +52,8 @@ export default function CuestionarioWellness({ onClose }: CuestionarioWellnessPr
 
   const promedio = Object.values(valores).reduce((a, b) => a + b, 0) / Object.keys(valores).length;
   const scoreRedondeado = Math.round(promedio * 10) / 10;
+  const bienestar = ((valores.sueno ?? 3) + (valores.energia ?? 3)) / 2;
+  const cansancio = valores.estres ?? 3;
 
   const handleOmitir = () => {
     if (onClose) onClose();
@@ -65,7 +67,7 @@ export default function CuestionarioWellness({ onClose }: CuestionarioWellnessPr
         Cuestionario Wellness <span className="text-xs font-normal text-gray-500">(opcional)</span>
       </h2>
       <p className="text-sm text-gray-600 mb-6">
-        Contanos cómo te sentís. Si completás el cuestionario y tu puntaje es bajo, te mostramos la rutina con menos series o repeticiones para que te recuperes mejor.
+        Contanos cómo te sentís (1 a 5). Según tus respuestas, la rutina puede mostrarse con menos series o repeticiones para que te recuperes mejor.
       </p>
 
         <div className="space-y-6">
@@ -77,8 +79,8 @@ export default function CuestionarioWellness({ onClose }: CuestionarioWellnessPr
                 <input
                   type="range"
                   min={1}
-                  max={10}
-                  value={valores[p.id] ?? 5}
+                  max={5}
+                  value={valores[p.id] ?? 3}
                   onChange={(e) => handleChange(p.id, parseInt(e.target.value, 10))}
                   className="flex-1 h-3 rounded-lg appearance-none bg-gray-200 accent-sanmartin-red"
                 />
@@ -86,8 +88,8 @@ export default function CuestionarioWellness({ onClose }: CuestionarioWellnessPr
               </div>
               <div className="flex justify-between text-xs text-gray-400 mt-1">
                 <span>1</span>
-                <span className="font-medium text-sanmartin-red">{valores[p.id] ?? 5}</span>
-                <span>10</span>
+                <span className="font-medium text-sanmartin-red">{valores[p.id] ?? 3}</span>
+                <span>5</span>
               </div>
             </div>
           ))}
@@ -95,10 +97,10 @@ export default function CuestionarioWellness({ onClose }: CuestionarioWellnessPr
 
         <div className="mt-6 pt-4 border-t border-gray-100">
           <p className="text-sm text-gray-600 mb-2">
-            Tu puntaje hoy: <strong className="text-sanmartin-red">{scoreRedondeado}/10</strong>
-            {scoreRedondeado < 6 && (
+            Puntaje hoy: <strong className="text-sanmartin-red">{scoreRedondeado}/5</strong> (bienestar: {bienestar.toFixed(1)}, cansancio/estrés: {cansancio})
+            {(bienestar < 2 || cansancio < 2) && (
               <span className="block text-xs text-amber-600 mt-1">
-                Te vamos a mostrar la rutina con una serie o repetición menos para que te recuperes mejor.
+                La rutina se adaptará con menos series o repeticiones según las reglas del staff.
               </span>
             )}
           </p>

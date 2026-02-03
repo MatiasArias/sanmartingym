@@ -53,20 +53,6 @@ export default function PesoForm({ rutinaId, dia, ejercicioId, series: totalSeri
     [persistir]
   );
 
-  const actualizarReps = useCallback(
-    (index: number, value: string) => {
-      setEstado((prev) => prev.map((s, i) => (i === index ? { ...s, reps: value } : s)));
-    },
-    []
-  );
-
-  const actualizarRir = useCallback(
-    (index: number, value: string) => {
-      setEstado((prev) => prev.map((s, i) => (i === index ? { ...s, rir: value } : s)));
-    },
-    []
-  );
-
   const actualizarPeso = useCallback(
     (index: number, value: string) => {
       setEstado((prev) => prev.map((s, i) => (i === index ? { ...s, peso: value } : s)));
@@ -89,7 +75,7 @@ export default function PesoForm({ rutinaId, dia, ejercicioId, series: totalSeri
   return (
     <div className="space-y-2">
       <div className="text-sm font-medium text-gray-700 mb-2">
-        Series ({completadasCount}/{totalSeries})
+        Series ({completadasCount}/{totalSeries}) — solo cargá el peso
       </div>
       <ul className="space-y-2">
         {estado.map((serie, i) => (
@@ -99,7 +85,9 @@ export default function PesoForm({ rutinaId, dia, ejercicioId, series: totalSeri
               serie.completada ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'
             }`}
           >
-            <span className="text-sm font-medium text-gray-600 w-14">Serie {i + 1}</span>
+            <span className="text-sm font-medium text-gray-600 shrink-0">
+              Serie {i + 1} — {repeticiones} repeticiones ({rir} RIR)
+            </span>
             <label className="sr-only">Peso (kg)</label>
             <input
               type="number"
@@ -109,31 +97,9 @@ export default function PesoForm({ rutinaId, dia, ejercicioId, series: totalSeri
               value={serie.peso}
               onChange={(e) => actualizarPeso(i, e.target.value)}
               onBlur={() => guardarAlSalir(i)}
-              className="w-14 px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-sanmartin-red focus:border-transparent"
+              className="w-20 px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-sanmartin-red focus:border-transparent"
             />
             <span className="text-sm text-gray-500">kg</span>
-            <label className="sr-only">Reps</label>
-            <input
-              type="number"
-              min={1}
-              placeholder="Reps"
-              value={serie.reps}
-              onChange={(e) => actualizarReps(i, e.target.value)}
-              onBlur={() => guardarAlSalir(i)}
-              className="w-16 px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-sanmartin-red focus:border-transparent"
-            />
-            <span className="text-sm text-gray-500">reps</span>
-            <label className="sr-only">RIR</label>
-            <input
-              type="number"
-              min={0}
-              placeholder="RIR"
-              value={serie.rir}
-              onChange={(e) => actualizarRir(i, e.target.value)}
-              onBlur={() => guardarAlSalir(i)}
-              className="w-14 px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-sanmartin-red focus:border-transparent"
-            />
-            <span className="text-sm text-gray-500">RIR</span>
             <button
               type="button"
               onClick={() => toggleSerie(i)}
