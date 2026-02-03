@@ -45,7 +45,7 @@ export default function ReglasWellnessForm({ reglasIniciales }: ReglasWellnessFo
   const actualizarRegla = (index: number, field: keyof ReglaWellness, value: ReglaWellness[keyof ReglaWellness]) => {
     setReglas((prev) => {
       const next = [...prev];
-      (next[index] as Record<string, unknown>)[field] = value;
+      (next[index] as unknown as Record<string, unknown>)[field] = value;
       return next;
     });
   };
