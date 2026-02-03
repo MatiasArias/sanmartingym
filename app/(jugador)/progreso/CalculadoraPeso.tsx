@@ -8,9 +8,31 @@ export default function CalculadoraPeso() {
   const [peso, setPeso] = useState('');
   const [reps, setReps] = useState('');
 
-  const pesoNum = parseFloat(peso);
-  const repsNum = parseInt(reps, 10);
+  const pesoNum = Math.min(parseFloat(peso) || 0, 500);
+  const repsNum = Math.min(parseInt(reps, 10) || 0, 30);
   const oneRM = pesoNum > 0 && repsNum > 0 ? estimar1RM(pesoNum, repsNum) : 0;
+
+  const handlePesoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const v = e.target.value;
+    if (v === '') {
+      setPeso('');
+      return;
+    }
+    const n = parseFloat(v);
+    if (!isNaN(n) && n > 500) setPeso('500');
+    else setPeso(v);
+  };
+
+  const handleRepsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const v = e.target.value;
+    if (v === '') {
+      setReps('');
+      return;
+    }
+    const n = parseInt(v, 10);
+    if (!isNaN(n) && n > 30) setReps('30');
+    else setReps(v);
+  };
 
   const repsObjetivos = [1, 2, 3, 4, 5, 6, 8, 10, 12];
 
@@ -30,10 +52,11 @@ export default function CalculadoraPeso() {
             type="number"
             placeholder="Ej. 60"
             value={peso}
-            onChange={(e) => setPeso(e.target.value)}
+            onChange={handlePesoChange}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sanmartin-red focus:border-transparent"
             step="0.5"
             min="0"
+            max="500"
           />
         </div>
         <div className="flex-1">
@@ -42,12 +65,14 @@ export default function CalculadoraPeso() {
             type="number"
             placeholder="Ej. 8"
             value={reps}
-            onChange={(e) => setReps(e.target.value)}
+            onChange={handleRepsChange}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sanmartin-red focus:border-transparent"
             min="1"
+            max="30"
           />
         </div>
       </div>
+      <p className="text-xs text-gray-500 mb-2">Máximo 500 kg y 30 reps.</p>
       {oneRM > 0 && (
         <div className="border-t border-gray-100 pt-4">
           <div className="text-center mb-3">

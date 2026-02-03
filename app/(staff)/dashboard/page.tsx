@@ -1,12 +1,12 @@
 import { getTokenPayload } from '@/lib/auth';
-import { getUsuarioById, getAllRutinas, getAllUsuarios } from '@/lib/redis';
-import { ClipboardList, Users, TrendingUp } from 'lucide-react';
+import { getUsuarioById, getAllRutinas, getAllUsuarios, getComentariosNuevosCount } from '@/lib/redis';
+import { ClipboardList, Users, MessageSquare } from 'lucide-react';
 import Link from 'next/link';
 
 export default async function DashboardPage() {
   const payload = await getTokenPayload();
   const usuario = await getUsuarioById(payload!.id as string);
-  
+  const comentariosNuevos = await getComentariosNuevosCount(payload!.id as string);
   const rutinas = await getAllRutinas();
   const usuarios = await getAllUsuarios();
   const jugadores = usuarios.filter(u => u.rol === 'jugador' && u.activo);
@@ -37,6 +37,25 @@ export default async function DashboardPage() {
           <p className="text-sm text-gray-600">Rutinas creadas</p>
         </div>
       </div>
+
+      {/* Notificación comentarios nuevos */}
+      {comentariosNuevos > 0 && (
+        <Link
+          href="/dashboard/rutinas"
+          className="flex items-center gap-3 p-4 bg-amber-50 border border-amber-200 rounded-xl hover:bg-amber-100 transition"
+        >
+          <div className="bg-amber-500 p-2 rounded-full">
+            <MessageSquare className="text-white" size={20} />
+          </div>
+          <div className="flex-1">
+            <p className="font-semibold text-amber-900">
+              {comentariosNuevos} {comentariosNuevos === 1 ? 'comentario nuevo' : 'comentarios nuevos'}
+            </p>
+            <p className="text-sm text-amber-700">En ejercicios de rutinas. Tocá para ver.</p>
+          </div>
+          <span className="text-amber-600 font-bold">→</span>
+        </Link>
+      )}
 
       {/* Quick Actions */}
       <div className="space-y-4">

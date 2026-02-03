@@ -48,6 +48,12 @@ export const redis = {
   async del(key: string): Promise<number> {
     return client.del(key);
   },
+  async zadd(key: string, score: number, member: string): Promise<number> {
+    return client.zadd(key, score, member);
+  },
+  async zcount(key: string, min: number | string, max: number | string): Promise<number> {
+    return client.zcount(key, min, max);
+  },
 };
 
 // TypeScript types
@@ -503,4 +509,60 @@ export async function saveEjerciciosForRutina(
   }
 
   return saved;
+}
+
+// --- Comentarios de ejercicios (jugadores envían, staff los ve) ---
+export interface ComentarioEjercicio {
+  id: string;
+  ejercicio_id: string;
+  texto: string;
+  timestamp: string;
+  anonimo: boolean;
+  /** Nombre del jugador cuando anonimo=false */
+  usuario_nombre?: string;
+}
+
+const COMENTARIOS_KEY_PREFIX = 'comentarios:ejercicio:';
+
+const COMENTARIOS_INDICE_KEY = 'comentarios:indice';
+
+export async function addComentarioEjercicio(data: Omit<ComentarioEjercicio, 'id'> & { anonimo: boolean; usuario_nombre?: string }): Promise<ComentarioEjercicio> {
+  const comentario: ComentarioEjercicio = {
+    ...data,
+    id: `comentario-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+  };
+  const key = `${COMENTARIOS_KEY_PREFIX}${data.ejercicio_id}`;
+  await redis.lpush(key, comentario);
+  const ts = new Date(comentario.timestamp).getTime();
+  await redis.zadd(COMENTARIOS_INDICE_KEY, ts, comentario.id);
+  return comentario;
+}
+
+export async function getComentariosByEjercicio(ejercicioId: string): Promise<ComentarioEjercicio[]> {
+  const key = `${COMENTARIOS_KEY_PREFIX}${ejercicioId}`;
+  const comentarios = (await redis.lrange(key, 0, -1)) as ComentarioEjercicio[];
+  return (comentarios || []).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+}
+
+export async function getComentariosByEjercicios(ejercicioIds: string[]): Promise<Record<string, ComentarioEjercicio[]>> {
+  const result: Record<string, ComentarioEjercicio[]> = {};
+  await Promise.all(
+    ejercicioIds.map(async (id) => {
+      result[id] = await getComentariosByEjercicio(id);
+    })
+  );
+  return result;
+}
+
+const STAFF_ULTIMA_VISTA_PREFIX = 'staff:ultima_vista_comentarios:';
+
+export async function getComentariosNuevosCount(staffUserId: string): Promise<number> {
+  const lastViewed = (await redis.get(`${STAFF_ULTIMA_VISTA_PREFIX}${staffUserId}`)) as number | string | null;
+  if (!lastViewed) return 0;
+  const minScore = typeof lastViewed === 'number' ? lastViewed : parseInt(String(lastViewed), 10) || 0;
+  return redis.zcount(COMENTARIOS_INDICE_KEY, minScore + 1, '+inf');
+}
+
+export async function marcarComentariosVistos(staffUserId: string): Promise<void> {
+  await redis.set(`${STAFF_ULTIMA_VISTA_PREFIX}${staffUserId}`, Date.now());
 }

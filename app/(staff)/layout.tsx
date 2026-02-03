@@ -2,7 +2,7 @@ import { getTokenPayload } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import { LayoutDashboard, Users, UserPlus, ClipboardList, Dumbbell } from 'lucide-react';
 import Link from 'next/link';
-import { getUsuarioById } from '@/lib/redis';
+import { getUsuarioById, getComentariosNuevosCount } from '@/lib/redis';
 import Image from 'next/image';
 import { LogoutButton } from './LogoutButton';
 
@@ -18,6 +18,7 @@ export default async function StaffLayout({
   }
 
   const usuario = await getUsuarioById(payload.id as string);
+  const comentariosNuevos = await getComentariosNuevosCount(payload.id as string);
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
@@ -44,7 +45,7 @@ export default async function StaffLayout({
           <NavLink href="/dashboard" icon={<LayoutDashboard size={18} />} label="Inicio" />
           <NavLink href="/dashboard/jugadores" icon={<UserPlus size={18} />} label="Jugadores" />
           <NavLink href="/dashboard/ejercicios" icon={<Dumbbell size={18} />} label="Ejercicios" />
-          <NavLink href="/dashboard/rutinas" icon={<ClipboardList size={18} />} label="Rutinas" />
+          <NavLink href="/dashboard/rutinas" icon={<ClipboardList size={18} />} label="Rutinas" badge={comentariosNuevos} />
           <NavLink href="/dashboard/asistencias" icon={<Users size={18} />} label="Asistencia" />
         </div>
       </nav>
@@ -52,13 +53,18 @@ export default async function StaffLayout({
   );
 }
 
-function NavLink({ href, icon, label }: { href: string; icon: React.ReactNode; label: string }) {
+function NavLink({ href, icon, label, badge = 0 }: { href: string; icon: React.ReactNode; label: string; badge?: number }) {
   return (
     <Link
       href={href}
-      className="flex flex-col items-center justify-center py-2 px-1 rounded-lg hover:bg-gray-800 transition text-gray-300 hover:text-white"
+      className="relative flex flex-col items-center justify-center py-2 px-1 rounded-lg hover:bg-gray-800 transition text-gray-300 hover:text-white"
     >
       {icon}
+      {badge > 0 && (
+        <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] flex items-center justify-center bg-sanmartin-red text-white text-xs font-bold rounded-full px-1">
+          {badge > 99 ? '99+' : badge}
+        </span>
+      )}
       <span className="text-xs mt-1">{label}</span>
     </Link>
   );
