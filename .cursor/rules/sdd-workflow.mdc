@@ -1,0 +1,30 @@
+---
+description: Flujo SDD: revisar specs → actualizar → desarrollar → verificar consistencia
+alwaysApply: true
+---
+
+# Workflow SDD (Specification-Driven Development)
+
+En cada prompt de desarrollo, seguir este flujo en orden:
+
+## 1. Revisar specs
+Antes de escribir código, leer las especificaciones relevantes:
+- `specs/SPECS-COMPLETAS.md` – especificaciones funcionales, no funcionales y user stories
+- `specs/00-overview.md`, `specs/01-users.md`, `specs/02-ejercicios.md`, `specs/03-rutinas.md` según el ámbito
+- `SPEC.md` – contexto y features principales
+
+## 2. Actualizar specs (pre-desarrollo)
+Si el cambio solicitado implica funcionalidad nueva o modificación de comportamiento:
+- Actualizar las specs afectadas **antes** de implementar
+- Añadir/modificar requisitos funcionales y user stories si aplica
+
+## 3. Desarrollar
+Implementar siguiendo las specs actualizadas. El código es la implementación de la spec.
+
+## 4. Verificar consistencia (post-desarrollo)
+Al finalizar el desarrollo:
+- Revisar que lo implementado coincida con las specs
+- Actualizar `SPECS-COMPLETAS.md` y los módulos en `specs/` si hubo desvíos o detalles no documentados
+- Mantener el estado en las specs (Specified, Implemented, etc.) si aplica
+
+**Regla**: La spec es la fuente de verdad. Código y specs deben quedar siempre consistentes.

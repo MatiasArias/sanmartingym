@@ -4,10 +4,10 @@ import { saveWellnessSesion } from '@/lib/redis';
 import { z } from 'zod';
 
 const wellnessSchema = z.object({
-  sueno: z.number().min(1).max(10),
-  energia: z.number().min(1).max(10),
-  dolor_muscular: z.number().min(1).max(10).optional(),
-  estres: z.number().min(1).max(10).optional(),
+  sueno: z.number().min(1).max(5),
+  energia: z.number().min(1).max(5),
+  dolor_muscular: z.number().min(1).max(5).optional(),
+  estres: z.number().min(1).max(5).optional(),
 });
 
 export async function POST(request: NextRequest) {
@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
     if (data.estres != null) respuestas.estres = data.estres;
 
     const valores = Object.values(respuestas);
-    const score = Math.round((valores.reduce((a, b) => a + b, 0) / valores.length) * 10) / 10;
+    const score = Math.round((valores.reduce((a, b) => a + b, 0) / valores.length) * 10) / 10; // promedio 1-5
 
     const fecha = new Date().toISOString().split('T')[0];
     await saveWellnessSesion({

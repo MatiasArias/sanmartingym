@@ -1,8 +1,8 @@
 import { getTokenPayload } from '@/lib/auth';
-import { getRutinaById, getEjerciciosByRutina, getDiasDeRutina, getComentariosByEjercicios, marcarComentariosVistos } from '@/lib/redis';
+import { getRutinaById, getEjerciciosByRutina, getDiasDeRutina, getComentariosNoResueltosByEjercicios, marcarComentariosVistos } from '@/lib/redis';
 import { ArrowLeft, Pencil, Trophy, Moon, MessageSquare } from 'lucide-react';
 import Link from 'next/link';
-import AgregarComentarioForm from '../AgregarComentarioForm';
+import ResolverComentarioButton from '../../ResolverComentarioButton';
 
 const diasOrden = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'] as const;
 
@@ -14,7 +14,7 @@ export default async function RutinaDetailPage({ params }: { params: Promise<{ i
   const ejercicios = await getEjerciciosByRutina(id);
   const dias = await getDiasDeRutina(id);
   const ejercicioIds = ejercicios.map((e) => e.id);
-  const comentariosPorEjercicio = await getComentariosByEjercicios(ejercicioIds);
+  const comentariosPorEjercicio = await getComentariosNoResueltosByEjercicios(ejercicioIds);
 
   if (!rutina) {
     return (
@@ -92,30 +92,34 @@ export default async function RutinaDetailPage({ params }: { params: Promise<{ i
                             <span>•</span>
                             <span>RIR {ej.rir}</span>
                           </div>
-                          <div className="mt-3 pt-3 border-t border-gray-100">
-                              <div className="flex items-center gap-1.5 text-sm text-gray-600 mb-1">
+                          <div className="mt-3 pt-3 border-t border-gray-200">
+                              <div className="flex items-center gap-1.5 text-sm text-gray-600 mb-2">
                                 <MessageSquare size={14} className="text-sanmartin-red" />
-                                <span className="font-medium">Comentarios ({comentarios.length})</span>
+                                <span className="font-medium">Comentarios de jugadores ({comentarios.length})</span>
                               </div>
-                              {comentarios.length > 0 && (
-                                <div className="space-y-1.5 mb-2">
+                              {comentarios.length > 0 ? (
+                                <div className="space-y-1.5">
                                   {comentarios.map((c) => (
-                                    <div key={c.id} className="text-sm bg-gray-50 rounded px-2 py-1.5 border border-gray-100">
-                                      <p className="text-gray-800">{c.texto}</p>
-                                      <p className="text-xs text-gray-400">
-                                        {new Date(c.timestamp).toLocaleDateString('es-AR', {
-                                          day: 'numeric',
-                                          month: 'short',
-                                          hour: '2-digit',
-                                          minute: '2-digit',
-                                        })}{' '}
-                                        • {c.anonimo ? 'Anónimo' : (c.usuario_nombre ?? 'Jugador')}
-                                      </p>
+                                    <div key={c.id} className="flex items-start justify-between gap-2 text-sm bg-gray-50 rounded px-2 py-1.5 border border-gray-100">
+                                      <div className="min-w-0 flex-1">
+                                        <p className="text-gray-800">{c.texto}</p>
+                                        <p className="text-xs text-gray-400">
+                                          {new Date(c.timestamp).toLocaleDateString('es-AR', {
+                                            day: 'numeric',
+                                            month: 'short',
+                                            hour: '2-digit',
+                                            minute: '2-digit',
+                                          })}{' '}
+                                          • {c.anonimo ? 'Anónimo' : (c.usuario_nombre ?? 'Jugador')}
+                                        </p>
+                                      </div>
+                                      <ResolverComentarioButton comentarioId={c.id} ejercicioId={ej.id} ejercicioNombre={ej.nombre} />
                                     </div>
                                   ))}
                                 </div>
+                              ) : (
+                                <p className="text-sm text-gray-500">No hay comentarios pendientes</p>
                               )}
-                              <AgregarComentarioForm ejercicioId={ej.id} ejercicioNombre={ej.nombre} />
                           </div>
                         </div>
                       </div>

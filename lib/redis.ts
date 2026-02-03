@@ -54,6 +54,9 @@ export const redis = {
   async zcount(key: string, min: number | string, max: number | string): Promise<number> {
     return client.zcount(key, min, max);
   },
+  async zrem(key: string, ...members: string[]): Promise<number> {
+    return client.zrem(key, ...members);
+  },
 };
 
 // TypeScript types
@@ -92,7 +95,8 @@ export interface EjercicioPlantilla {
   series_default: number;
   rir_default: number;
   repeticiones_default: number;
-  tipo: 'empuje' | 'traccion';
+  /** Tipo de patrón principal del ejercicio. Se agrega 'movilidad' para activaciones sin carga. */
+  tipo: 'empuje' | 'traccion' | 'movilidad';
   musculo_principal: string;
   modo_serie: 'serie_x_repeticion' | 'serie_x_minutos' | 'serie_x_brazo';
   ayuda_alumno: string;
@@ -209,10 +213,12 @@ export async function getEjerciciosByRutinaYDia(rutinaId: string, dia: string): 
     .sort((a, b) => a.orden - b.orden);
 }
 
-/** Ejercicio enriquecido con ayuda_alumno y nota de la semana actual */
+/** Ejercicio enriquecido con ayuda_alumno, nota de la semana actual y tipo de plantilla */
 export interface EjercicioConAyuda extends Ejercicio {
   ayuda_alumno?: string;
   nota_semana?: string;
+  /** Copiamos el tipo de la plantilla (empuje/traccion/movilidad) para la UI del jugador. */
+  tipo_plantilla?: EjercicioPlantilla['tipo'];
 }
 
 /** Obtiene el número de semana actual (1-based) desde fecha_inicio */
@@ -246,7 +252,10 @@ export async function getEjerciciosByRutinaYDiaConAyuda(
     }
     if (e.ejercicio_plantilla_id) {
       const plantilla = await getPlantillaEjercicioById(e.ejercicio_plantilla_id);
-      if (plantilla?.ayuda_alumno) ej.ayuda_alumno = plantilla.ayuda_alumno;
+      if (plantilla) {
+        if (plantilla.ayuda_alumno) ej.ayuda_alumno = plantilla.ayuda_alumno;
+        ej.tipo_plantilla = plantilla.tipo;
+      }
     }
     enriquecidos.push(ej);
   }
@@ -335,13 +344,37 @@ export async function getRpeSesion(usuarioId: string, fecha: string): Promise<Rp
   return (await redis.get(key)) as RpeSesion | null;
 }
 
-/** Cuestionario Wellness del día (antes de rutina). Score 1-10, bajo = cansado */
+/** Cuestionario Wellness del día (antes de rutina). Puntajes 1-5 por pregunta. */
 export interface WellnessSesion {
   usuario_id: string;
   fecha: string;
-  score: number; // promedio de respuestas 1-10
-  respuestas: Record<string, number>;
+  score: number; // promedio de respuestas 1-5
+  respuestas: Record<string, number>; // sueno, energia, dolor_muscular, estres (1-5)
   timestamp: string;
+}
+
+/** Regla de adaptación por wellness: si métrica cumple condición, aplicar acción. */
+export interface ReglaWellness {
+  metric: 'bienestar' | 'cansancio';
+  operator: '<' | '<=';
+  threshold: number; // 1-5
+  action: 'quitar_reps' | 'quitar_series';
+  amount: number;
+}
+
+const WELLNESS_RULES_KEY = 'config:wellness-rules';
+
+export async function getWellnessRules(): Promise<ReglaWellness[]> {
+  const data = await redis.get(WELLNESS_RULES_KEY);
+  if (data && Array.isArray(data) && data.length > 0) return data as ReglaWellness[];
+  return [
+    { metric: 'bienestar', operator: '<', threshold: 2, action: 'quitar_reps', amount: 1 },
+    { metric: 'cansancio', operator: '<', threshold: 2, action: 'quitar_series', amount: 1 },
+  ];
+}
+
+export async function setWellnessRules(rules: ReglaWellness[]): Promise<void> {
+  await redis.set(WELLNESS_RULES_KEY, rules);
 }
 
 const WELLNESS_KEY_PREFIX = 'wellness:';
@@ -520,6 +553,9 @@ export interface ComentarioEjercicio {
   anonimo: boolean;
   /** Nombre del jugador cuando anonimo=false */
   usuario_nombre?: string;
+  /** Si fue resuelto por el staff */
+  resuelto?: boolean;
+  resuelto_at?: string;
 }
 
 const COMENTARIOS_KEY_PREFIX = 'comentarios:ejercicio:';
@@ -538,10 +574,12 @@ export async function addComentarioEjercicio(data: Omit<ComentarioEjercicio, 'id
   return comentario;
 }
 
-export async function getComentariosByEjercicio(ejercicioId: string): Promise<ComentarioEjercicio[]> {
+export async function getComentariosByEjercicio(ejercicioId: string, soloNoResueltos = false): Promise<ComentarioEjercicio[]> {
   const key = `${COMENTARIOS_KEY_PREFIX}${ejercicioId}`;
   const comentarios = (await redis.lrange(key, 0, -1)) as ComentarioEjercicio[];
-  return (comentarios || []).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  let list = comentarios || [];
+  if (soloNoResueltos) list = list.filter((c) => !c.resuelto);
+  return list.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 }
 
 export async function getComentariosByEjercicios(ejercicioIds: string[]): Promise<Record<string, ComentarioEjercicio[]>> {
@@ -552,6 +590,57 @@ export async function getComentariosByEjercicios(ejercicioIds: string[]): Promis
     })
   );
   return result;
+}
+
+export async function getComentariosNoResueltosByEjercicios(ejercicioIds: string[]): Promise<Record<string, ComentarioEjercicio[]>> {
+  const result: Record<string, ComentarioEjercicio[]> = {};
+  await Promise.all(
+    ejercicioIds.map(async (id) => {
+      result[id] = await getComentariosByEjercicio(id, true);
+    })
+  );
+  return result;
+}
+
+const COMENTARIOS_RESUELTOS_KEY = 'comentarios:resueltos';
+
+export interface ComentarioResuelto extends ComentarioEjercicio {
+  ejercicio_nombre: string;
+  resuelto_at: string;
+}
+
+export async function markComentarioResuelto(
+  comentarioId: string,
+  ejercicioId: string,
+  ejercicioNombre: string
+): Promise<void> {
+  const key = `${COMENTARIOS_KEY_PREFIX}${ejercicioId}`;
+  const comentarios = (await redis.lrange(key, 0, -1)) as ComentarioEjercicio[];
+  const resueltoAt = new Date().toISOString();
+  const actualizados = comentarios.map((c) =>
+    c.id === comentarioId ? { ...c, resuelto: true, resuelto_at: resueltoAt } : c
+  );
+  await redis.del(key);
+  for (const c of actualizados.reverse()) {
+    await redis.lpush(key, c);
+  }
+  const comentario = actualizados.find((c) => c.id === comentarioId);
+  if (comentario) {
+    const paraHistorial: ComentarioResuelto = {
+      ...comentario,
+      ejercicio_nombre: ejercicioNombre,
+      resuelto_at: resueltoAt,
+    };
+    await redis.lpush(COMENTARIOS_RESUELTOS_KEY, paraHistorial);
+  }
+  await redis.zrem(COMENTARIOS_INDICE_KEY, comentarioId);
+}
+
+export async function getComentariosResueltos(): Promise<ComentarioResuelto[]> {
+  const comentarios = (await redis.lrange(COMENTARIOS_RESUELTOS_KEY, 0, -1)) as ComentarioResuelto[];
+  return (comentarios || []).sort(
+    (a, b) => new Date(b.resuelto_at || b.timestamp).getTime() - new Date(a.resuelto_at || a.timestamp).getTime()
+  );
 }
 
 const STAFF_ULTIMA_VISTA_PREFIX = 'staff:ultima_vista_comentarios:';

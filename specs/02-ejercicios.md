@@ -20,7 +20,8 @@ Sección de configuración del staff para gestionar el catálogo de ejercicios. 
 - **series_default**: number - Cantidad de series por defecto
 - **rir_default**: number - RIR (Reps in Reserve) por defecto
 - **repeticiones_default**: number - Repeticiones/valor por defecto (según modo)
-- **tipo**: 'empuje' | 'traccion' - Tipo de ejercicio
+- **tipo**: 'empuje' | 'traccion' | 'movilidad' - Tipo de ejercicio.  
+  - `movilidad`: ejercicios de activación/movilidad sin carga (el jugador solo marca "listo").
 - **musculo_principal**: string - Músculo principal trabajado
 - **modo_serie**: 
   - `serie_x_repeticion` - Series × Repetición (ej: 4×10)

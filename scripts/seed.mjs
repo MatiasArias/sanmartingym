@@ -94,6 +94,10 @@ async function seed() {
     { nombre: 'Sentadilla Frontal', series_default: 4, rir_default: 2, repeticiones_default: 8, tipo: 'empuje', musculo_principal: 'Cuádriceps', modo_serie: 'serie_x_repeticion', ayuda_alumno: 'Codos altos, torso erguido.' },
     { nombre: 'Press Inclinado', series_default: 4, rir_default: 2, repeticiones_default: 10, tipo: 'empuje', musculo_principal: 'Pectorales', modo_serie: 'serie_x_repeticion', ayuda_alumno: 'Banco 30-45°, énfasis en porción superior.' },
     { nombre: 'Peso Muerto Rumano', series_default: 3, rir_default: 2, repeticiones_default: 10, tipo: 'empuje', musculo_principal: 'Isquiotibiales', modo_serie: 'serie_x_repeticion', ayuda_alumno: 'Piernas casi rectas, flexión de cadera.' },
+    // Ejercicios de movilidad / activación (sin foco en carga)
+    { nombre: 'Movilidad de Cadera', series_default: 2, rir_default: 0, repeticiones_default: 12, tipo: 'movilidad', musculo_principal: 'Cadera', modo_serie: 'serie_x_repeticion', ayuda_alumno: 'Movimientos controlados de movilidad de cadera antes de la sesión.' },
+    { nombre: 'Movilidad de Hombros', series_default: 2, rir_default: 0, repeticiones_default: 12, tipo: 'movilidad', musculo_principal: 'Hombros', modo_serie: 'serie_x_repeticion', ayuda_alumno: 'Círculos de brazos, movilidad escapular y activación suave.' },
+    { nombre: 'Movilidad General', series_default: 1, rir_default: 0, repeticiones_default: 10, tipo: 'movilidad', musculo_principal: 'Core', modo_serie: 'serie_x_repeticion', ayuda_alumno: 'Circuito corto de movilidad general (caderas, columna, hombros).' },
     { nombre: 'Curl de Bíceps', series_default: 3, rir_default: 2, repeticiones_default: 12, tipo: 'traccion', musculo_principal: 'Bíceps', modo_serie: 'serie_x_repeticion', ayuda_alumno: 'Codos fijos, controlar la bajada.' },
   ];
 
@@ -131,12 +135,18 @@ async function seed() {
   console.log('🏋️ Creating routine exercises...');
 
   const ejerciciosRutina = [
+    // Lunes: comenzamos con movilidad general como activación
+    { dia: 'lunes', plantilla: 'Movilidad General', series: 1, orden: 0 },
     { dia: 'lunes', plantilla: 'Sentadilla', series: 4, orden: 1 },
     { dia: 'lunes', plantilla: 'Press Banca', series: 4, orden: 2 },
     { dia: 'lunes', plantilla: 'Remo con Barra', series: 3, orden: 3 },
+    // Miércoles: movilidad de cadera antes del trabajo pesado
+    { dia: 'miercoles', plantilla: 'Movilidad de Cadera', series: 2, orden: 0 },
     { dia: 'miercoles', plantilla: 'Peso Muerto', series: 4, orden: 1 },
     { dia: 'miercoles', plantilla: 'Press Militar', series: 3, orden: 2 },
     { dia: 'miercoles', plantilla: 'Dominadas', series: 3, orden: 3 },
+    // Viernes: movilidad de hombros antes del tren superior
+    { dia: 'viernes', plantilla: 'Movilidad de Hombros', series: 2, orden: 0 },
     { dia: 'viernes', plantilla: 'Sentadilla Frontal', series: 4, orden: 1 },
     { dia: 'viernes', plantilla: 'Press Inclinado', series: 4, orden: 2 },
     { dia: 'viernes', plantilla: 'Peso Muerto Rumano', series: 3, orden: 3 },
