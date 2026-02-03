@@ -48,6 +48,12 @@ export const redis = {
   async del(key: string): Promise<number> {
     return client.del(key);
   },
+  async zadd(key: string, score: number, member: string): Promise<number> {
+    return client.zadd(key, score, member);
+  },
+  async zcount(key: string, min: number | string, max: number | string): Promise<number> {
+    return client.zcount(key, min, max);
+  },
 };
 
 // TypeScript types
@@ -518,6 +524,8 @@ export interface ComentarioEjercicio {
 
 const COMENTARIOS_KEY_PREFIX = 'comentarios:ejercicio:';
 
+const COMENTARIOS_INDICE_KEY = 'comentarios:indice';
+
 export async function addComentarioEjercicio(data: Omit<ComentarioEjercicio, 'id'> & { anonimo: boolean; usuario_nombre?: string }): Promise<ComentarioEjercicio> {
   const comentario: ComentarioEjercicio = {
     ...data,
@@ -525,6 +533,8 @@ export async function addComentarioEjercicio(data: Omit<ComentarioEjercicio, 'id
   };
   const key = `${COMENTARIOS_KEY_PREFIX}${data.ejercicio_id}`;
   await redis.lpush(key, comentario);
+  const ts = new Date(comentario.timestamp).getTime();
+  await redis.zadd(COMENTARIOS_INDICE_KEY, ts, comentario.id);
   return comentario;
 }
 
@@ -542,4 +552,17 @@ export async function getComentariosByEjercicios(ejercicioIds: string[]): Promis
     })
   );
   return result;
+}
+
+const STAFF_ULTIMA_VISTA_PREFIX = 'staff:ultima_vista_comentarios:';
+
+export async function getComentariosNuevosCount(staffUserId: string): Promise<number> {
+  const lastViewed = (await redis.get(`${STAFF_ULTIMA_VISTA_PREFIX}${staffUserId}`)) as number | string | null;
+  if (!lastViewed) return 0;
+  const minScore = typeof lastViewed === 'number' ? lastViewed : parseInt(String(lastViewed), 10) || 0;
+  return redis.zcount(COMENTARIOS_INDICE_KEY, minScore + 1, '+inf');
+}
+
+export async function marcarComentariosVistos(staffUserId: string): Promise<void> {
+  await redis.set(`${STAFF_ULTIMA_VISTA_PREFIX}${staffUserId}`, Date.now());
 }

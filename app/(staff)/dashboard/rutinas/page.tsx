@@ -1,8 +1,11 @@
-import { getAllRutinas, getAllCategorias } from '@/lib/redis';
+import { getTokenPayload } from '@/lib/auth';
+import { getAllRutinas, getAllCategorias, marcarComentariosVistos } from '@/lib/redis';
 import Link from 'next/link';
 import { Eye, Calendar, Plus } from 'lucide-react';
 
 export default async function RutinasPage() {
+  const payload = await getTokenPayload();
+  if (payload?.id) await marcarComentariosVistos(payload.id as string);
   const rutinas = await getAllRutinas();
   const categorias = await getAllCategorias();
 

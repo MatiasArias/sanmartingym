@@ -12,13 +12,10 @@ function shouldShowLoading(input: RequestInfo | URL): boolean {
   const url = getRequestUrl(input);
   try {
     const parsed = new URL(url, typeof window !== 'undefined' ? window.location.origin : 'http://localhost');
-    // Solo peticiones al mismo origen
     if (typeof window !== 'undefined' && parsed.origin !== window.location.origin) return false;
     const path = parsed.pathname;
-    // Excluir solo chunks estáticos (JS, CSS, etc.)
     if (path.startsWith('/_next/static/')) return false;
     if (/\.(js|css|woff2?|ico|png|jpg|jpeg|gif|svg|webp)(\?|$)/.test(path)) return false;
-    // Incluir: /api/*, rutas de navegación (/, /home, /rutina) y payloads RSC (/_next/data/...)
     return path.startsWith('/api/') || path.startsWith('/_next/data/') || (!path.startsWith('/_next/') && !path.includes('.'));
   } catch {
     return false;

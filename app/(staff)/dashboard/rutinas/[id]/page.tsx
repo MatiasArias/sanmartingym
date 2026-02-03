@@ -1,4 +1,5 @@
-import { getRutinaById, getEjerciciosByRutina, getDiasDeRutina, getComentariosByEjercicios } from '@/lib/redis';
+import { getTokenPayload } from '@/lib/auth';
+import { getRutinaById, getEjerciciosByRutina, getDiasDeRutina, getComentariosByEjercicios, marcarComentariosVistos } from '@/lib/redis';
 import { ArrowLeft, Pencil, Trophy, Moon, MessageSquare } from 'lucide-react';
 import Link from 'next/link';
 import AgregarComentarioForm from '../AgregarComentarioForm';
@@ -7,6 +8,8 @@ const diasOrden = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'
 
 export default async function RutinaDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  const payload = await getTokenPayload();
+  if (payload?.id) await marcarComentariosVistos(payload.id as string);
   const rutina = await getRutinaById(id);
   const ejercicios = await getEjerciciosByRutina(id);
   const dias = await getDiasDeRutina(id);
