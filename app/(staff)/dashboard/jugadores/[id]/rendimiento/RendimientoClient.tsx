@@ -21,7 +21,7 @@ type RendimientoData = {
   registros: RegistroCarga[];
   metricas: {
     pesoCorporalKg: number | null;
-    rmRelativaPorEjercicio: Record<string, number> | null;
+    rmRelativaPorEjercicio: Record<string, number | null> | null;
   };
 };
 
