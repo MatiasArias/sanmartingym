@@ -1,0 +1,19 @@
+---
+description: Reglas para PRs: no subir descripción del PR en .md
+alwaysApply: true
+---
+
+# PR Workflow
+
+## Descripción del PR
+
+- **No** crear ni modificar archivos `.md` con el contenido detallado de la descripción de un PR
+- La descripción del PR debe vivir **solo en el PR de GitHub**, no en el repositorio
+- El `.github/PULL_REQUEST_TEMPLATE.md` debe contener únicamente **placeholders/plantilla genérica** (Resumen, Cambios, Checklist vacíos), no la descripción concreta de un PR específico
+
+## Ejemplo
+
+```
+❌ Mal: Comitear PULL_REQUEST_TEMPLATE.md con "Esta PR agrega X, Y, Z..." (descripción específica)
+✅ Bien: Template con placeholders; la descripción se escribe o pega directamente en GitHub al crear el PR
+```

@@ -14,7 +14,7 @@ export default async function WellnessPage() {
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Reglas Wellness</h1>
         <p className="text-sm text-gray-600 mt-1">
-          Definí cómo se adapta la rutina según el cuestionario wellness (puntajes 1-5). Bienestar se calcula con sueño y energía; cansancio usa estrés/cansancio mental.
+          Definí cómo se adapta la rutina según el score wellness del jugador (0-25). Un score bajo indica más cansancio o malestar; podés configurar reglas para quitar series o repeticiones.
         </p>
       </div>
 

@@ -4,9 +4,9 @@ import { getWellnessRules, setWellnessRules } from '@/lib/redis';
 import { z } from 'zod';
 
 const reglaSchema = z.object({
-  metric: z.enum(['bienestar', 'cansancio']),
+  metric: z.literal('score'),
   operator: z.enum(['<', '<=']),
-  threshold: z.number().min(1).max(5),
+  threshold: z.number().min(0).max(25),
   action: z.enum(['quitar_reps', 'quitar_series']),
   amount: z.number().int().min(1).max(5),
 });

@@ -1,39 +1,24 @@
 import { getTokenPayload } from '@/lib/auth';
+import { redirect } from 'next/navigation';
 import { getUsuarioById, getRutinaActivaByCategoria, getEjerciciosByRutinaYDiaConAyuda, getDiasDeRutina, getRegistrosByJugador, getWellnessSesion, getSemanaActual, getWellnessRules, type ReglaWellness } from '@/lib/redis';
 import { sugerirPesoDesdeRegistro } from '@/lib/calculadora-peso';
 import RutinaClient from './RutinaClient';
 
-/** Deriva bienestar (1-5) y cansancio (1-5) desde respuestas del cuestionario. */
-function derivarMetricasWellness(respuestas: Record<string, number>): { bienestar: number; cansancio: number } {
-  const sueno = respuestas.sueno ?? 3;
-  const energia = respuestas.energia ?? 3;
-  const estres = respuestas.estres ?? 3;
-  return {
-    bienestar: Math.round(((sueno + energia) / 2) * 10) / 10,
-    cansancio: estres, // 1=muy cansado, 5=nada
-  };
-}
-
-function cumpleRegla(metric: 'bienestar' | 'cansancio', value: number, rule: ReglaWellness): boolean {
-  if (rule.metric !== metric) return false;
-  if (rule.operator === '<') return value < rule.threshold;
-  return value <= rule.threshold;
+function cumpleRegla(score: number, rule: ReglaWellness): boolean {
+  if (rule.metric !== 'score') return false;
+  if (rule.operator === '<') return score < rule.threshold;
+  return score <= rule.threshold;
 }
 
 function aplicarReglasWellness(
   ejercicios: Awaited<ReturnType<typeof getEjerciciosByRutinaYDiaConAyuda>>,
   reglas: ReglaWellness[],
-  bienestar: number,
-  cansancio: number
+  score: number
 ) {
   let quitarReps = 0;
   let quitarSeries = 0;
   for (const r of reglas) {
-    if (r.metric === 'bienestar' && cumpleRegla('bienestar', bienestar, r)) {
-      if (r.action === 'quitar_reps') quitarReps += r.amount;
-      else quitarSeries += r.amount;
-    }
-    if (r.metric === 'cansancio' && cumpleRegla('cansancio', cansancio, r)) {
+    if (cumpleRegla(score, r)) {
       if (r.action === 'quitar_reps') quitarReps += r.amount;
       else quitarSeries += r.amount;
     }
@@ -47,7 +32,8 @@ function aplicarReglasWellness(
 
 export default async function RutinaPage({ searchParams }: { searchParams: { dia?: string } }) {
   const payload = await getTokenPayload();
-  const usuario = await getUsuarioById(payload!.id as string);
+  if (!payload?.id) redirect('/login');
+  const usuario = await getUsuarioById(payload.id as string);
 
   if (!usuario?.categoria_id) {
     return (
@@ -72,31 +58,30 @@ export default async function RutinaPage({ searchParams }: { searchParams: { dia
   }
 
   const hoy = new Date().toISOString().split('T')[0];
-  const wellness = await getWellnessSesion(payload!.id as string, hoy);
+  const wellness = await getWellnessSesion(payload.id as string, hoy);
 
   const dias = await getDiasDeRutina(rutina.id);
   const diaActual = searchParams.dia || dias[0] || 'lunes';
-  let ejercicios = await getEjerciciosByRutinaYDiaConAyuda(rutina.id, diaActual, rutina);
 
   const reglasWellness = await getWellnessRules();
-  if (wellness && Object.keys(wellness.respuestas).length > 0) {
-    const { bienestar, cansancio } = derivarMetricasWellness(wellness.respuestas);
-    ejercicios = aplicarReglasWellness(ejercicios, reglasWellness, bienestar, cansancio);
+  // Normalizar score: sesiones antiguas usaban 1-5, nuevas usan 0-25
+  const wellnessScore025 = wellness
+    ? wellness.score <= 5
+      ? Math.round(wellness.score * 5)
+      : wellness.score
+    : null;
+
+  // Cargar ejercicios siempre (wellness solo adapta series/reps; si no completó, ver rutina completa)
+  let ejercicios = await getEjerciciosByRutinaYDiaConAyuda(rutina.id, diaActual, rutina);
+  if (wellness && Object.keys(wellness.respuestas).length > 0 && wellnessScore025 != null) {
+    ejercicios = aplicarReglasWellness(ejercicios, reglasWellness, wellnessScore025);
   }
 
   const wellnessBajo =
-    wellness &&
-    (() => {
-      const { bienestar, cansancio } = derivarMetricasWellness(wellness.respuestas);
-      return reglasWellness.some(
-        (r) =>
-          (r.metric === 'bienestar' && cumpleRegla('bienestar', bienestar, r)) ||
-          (r.metric === 'cansancio' && cumpleRegla('cansancio', cansancio, r))
-      );
-    })();
+    wellnessScore025 != null && reglasWellness.some((r) => cumpleRegla(wellnessScore025, r));
 
-  // Calcular peso sugerido por ejercicio según historial del jugador
-  const registros = await getRegistrosByJugador(payload!.id as string);
+  // Calcular peso sugerido por ejercicio (solo cuando hay ejercicios)
+  const registros = await getRegistrosByJugador(payload.id as string);
   const sugerencias: Record<string, number> = {};
   for (const ej of ejercicios) {
     const registrosEj = registros
@@ -119,7 +104,7 @@ export default async function RutinaPage({ searchParams }: { searchParams: { dia
       diaActual={diaActual}
       semanaActual={semanaActual}
       sugerenciasPeso={sugerencias}
-      wellnessScore={wellness?.score ?? null}
+      wellnessScore={wellnessScore025}
       wellnessBajo={wellnessBajo ?? false}
     />
   );

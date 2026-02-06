@@ -1,6 +1,6 @@
 import { getJugadores, getAllCategorias } from '@/lib/redis';
 import Link from 'next/link';
-import { Plus } from 'lucide-react';
+import { TrendingUp } from 'lucide-react';
 import JugadorForm from './JugadorForm';
 import type { Usuario } from '@/lib/redis';
 
@@ -44,7 +44,8 @@ export default async function JugadoresPage() {
                   <th className="py-2 pr-4">DNI</th>
                   <th className="py-2 pr-4">Nombre</th>
                   <th className="py-2 pr-4">Fecha nac.</th>
-                  <th className="py-2">Categoría</th>
+                  <th className="py-2 pr-4">Categoría</th>
+                  <th className="py-2 text-right">Acciones</th>
                 </tr>
               </thead>
               <tbody>
@@ -53,7 +54,16 @@ export default async function JugadoresPage() {
                     <td className="py-3 pr-4 font-mono">{j.dni}</td>
                     <td className="py-3 pr-4 font-medium">{j.nombre}</td>
                     <td className="py-3 pr-4">{formatFecha(j.fecha_nacimiento)}</td>
-                    <td className="py-3">{j.categoria_id ? categoriasMap[j.categoria_id] ?? j.categoria_id : '-'}</td>
+                    <td className="py-3 pr-4">{j.categoria_id ? categoriasMap[j.categoria_id] ?? j.categoria_id : '-'}</td>
+                    <td className="py-3 text-right">
+                      <Link
+                        href={`/dashboard/jugadores/${j.id}/rendimiento`}
+                        className="inline-flex items-center gap-1 text-sanmartin-red font-medium hover:underline"
+                      >
+                        <TrendingUp size={14} />
+                        Rendimiento
+                      </Link>
+                    </td>
                   </tr>
                 ))}
               </tbody>

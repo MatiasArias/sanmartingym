@@ -95,14 +95,6 @@ export default function LoginPage() {
               {loading ? 'Ingresando...' : 'Ingresar'}
             </button>
           </form>
-
-          <div className="mt-8 pt-6 border-t border-gray-200">
-            <p className="text-xs text-gray-500 text-center mb-2">Usuarios de prueba:</p>
-            <div className="space-y-1 text-xs text-gray-600">
-              <p className="text-center">👤 Jugador: <span className="font-mono font-semibold">45123456</span> (Juan Pérez)</p>
-              <p className="text-center">👨‍🏫 Staff: <span className="font-mono font-semibold">20345678</span> (Lucas Salvador)</p>
-            </div>
-          </div>
         </div>
       </div>
     </div>
