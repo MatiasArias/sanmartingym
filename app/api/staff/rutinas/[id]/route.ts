@@ -22,6 +22,7 @@ const ejercicioSchema = z.object({
   ejercicio_plantilla_id: z.string().min(1),
   dia: z.enum(DIAS_VALIDOS),
   orden: z.number().int().min(0),
+  circuito_nombre: z.string().optional(),
   config_por_semana: z.record(z.union([z.string(), z.number()]), configSemanaSchema),
 });
 
