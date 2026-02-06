@@ -7,7 +7,7 @@ import PesoForm from './PesoForm';
 import EscalaRPE from './EscalaRPE';
 import CuestionarioWellness from './CuestionarioWellness';
 import ComentarioJugadorModal from './ComentarioJugadorModal';
-import { Heart, MessageSquare } from 'lucide-react';
+import { Heart, MessageSquare, ChevronDown, ChevronUp } from 'lucide-react';
 import MovilidadReady from './MovilidadReady';
 
 /** Agrupa ejercicios por circuito_nombre preservando el orden del día */
@@ -39,29 +39,50 @@ interface RutinaClientProps {
 
 export default function RutinaClient({ rutina, ejercicios, dias, diaActual, semanaActual, sugerenciasPeso = {}, wellnessScore = null, wellnessBajo = false }: RutinaClientProps) {
   const [comentarioEjercicioId, setComentarioEjercicioId] = useState<string | null>(null);
+  const [wellnessExpandido, setWellnessExpandido] = useState(true);
+  const [wellnessOmitido, setWellnessOmitido] = useState(false);
   const gruposCircuito = useMemo(() => agruparPorCircuito(ejercicios), [ejercicios]);
-
-  // Si no completó el cuestionario wellness del día: mostrar SOLO el cuestionario (bloquear rutina)
-  if (wellnessScore == null) {
-    return (
-      <div className="p-4 space-y-4">
-        <div className="bg-white rounded-xl shadow-md p-6">
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">{rutina.nombre}</h1>
-          <p className="text-sm text-gray-600 mb-4">
-            Completá el cuestionario wellness para ver tu rutina del día.
-          </p>
-          <CuestionarioWellness />
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="p-4 space-y-4">
-      {/* Score wellness del día (0-25) */}
-      <p className="text-sm text-gray-600 bg-gray-50 rounded-lg px-3 py-2">
-        Wellness hoy: <strong className="text-sanmartin-red">{wellnessScore}/25</strong>
-      </p>
+      {/* Cuestionario wellness (opcional): si no completó, mostrar con opción de omitir */}
+      {wellnessScore == null && !wellnessOmitido && (
+        <div className="bg-white rounded-xl shadow-md overflow-hidden">
+          <button
+            type="button"
+            onClick={() => setWellnessExpandido((v) => !v)}
+            className="w-full flex items-center justify-between gap-2 p-4 text-left hover:bg-gray-50 transition"
+          >
+            <span className="font-bold text-gray-900 flex items-center gap-2">
+              <Heart className="text-sanmartin-red" size={20} />
+              Cuestionario wellness (opcional)
+            </span>
+            {wellnessExpandido ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+          </button>
+          {wellnessExpandido && (
+            <div className="px-4 pb-4 border-t border-gray-100 pt-4 space-y-4">
+              <p className="text-sm text-gray-600">
+                Contanos cómo te sentís para que la rutina se adapte a tu recuperación. Podés omitirlo y ver la rutina completa.
+              </p>
+              <CuestionarioWellness onClose={() => setWellnessExpandido(false)} />
+              <button
+                type="button"
+                onClick={() => setWellnessOmitido(true)}
+                className="w-full py-2.5 border border-gray-300 rounded-xl font-medium text-gray-600 hover:bg-gray-50"
+              >
+                Omitir y ver rutina
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Score wellness del día (0-25) - solo si completó */}
+      {wellnessScore != null && (
+        <p className="text-sm text-gray-600 bg-gray-50 rounded-lg px-3 py-2">
+          Wellness hoy: <strong className="text-sanmartin-red">{wellnessScore}/25</strong>
+        </p>
+      )}
 
       <div className="bg-white rounded-xl shadow-md p-6">
         <h1 className="text-2xl font-bold text-gray-900 mb-2">{rutina.nombre}</h1>

@@ -1,4 +1,5 @@
 import { getTokenPayload } from '@/lib/auth';
+import { redirect } from 'next/navigation';
 import { getUsuarioById, getRutinaActivaByCategoria, getEjerciciosByRutinaYDiaConAyuda, getDiasDeRutina, getRegistrosByJugador, getWellnessSesion, getSemanaActual, getWellnessRules, type ReglaWellness } from '@/lib/redis';
 import { sugerirPesoDesdeRegistro } from '@/lib/calculadora-peso';
 import RutinaClient from './RutinaClient';
@@ -31,7 +32,8 @@ function aplicarReglasWellness(
 
 export default async function RutinaPage({ searchParams }: { searchParams: { dia?: string } }) {
   const payload = await getTokenPayload();
-  const usuario = await getUsuarioById(payload!.id as string);
+  if (!payload?.id) redirect('/login');
+  const usuario = await getUsuarioById(payload.id as string);
 
   if (!usuario?.categoria_id) {
     return (
@@ -56,7 +58,7 @@ export default async function RutinaPage({ searchParams }: { searchParams: { dia
   }
 
   const hoy = new Date().toISOString().split('T')[0];
-  const wellness = await getWellnessSesion(payload!.id as string, hoy);
+  const wellness = await getWellnessSesion(payload.id as string, hoy);
 
   const dias = await getDiasDeRutina(rutina.id);
   const diaActual = searchParams.dia || dias[0] || 'lunes';
@@ -69,10 +71,9 @@ export default async function RutinaPage({ searchParams }: { searchParams: { dia
       : wellness.score
     : null;
 
-  // Solo cargar ejercicios si el jugador completó el cuestionario wellness del día
-  let ejercicios: Awaited<ReturnType<typeof getEjerciciosByRutinaYDiaConAyuda>> = [];
+  // Cargar ejercicios siempre (wellness solo adapta series/reps; si no completó, ver rutina completa)
+  let ejercicios = await getEjerciciosByRutinaYDiaConAyuda(rutina.id, diaActual, rutina);
   if (wellness && Object.keys(wellness.respuestas).length > 0 && wellnessScore025 != null) {
-    ejercicios = await getEjerciciosByRutinaYDiaConAyuda(rutina.id, diaActual, rutina);
     ejercicios = aplicarReglasWellness(ejercicios, reglasWellness, wellnessScore025);
   }
 
@@ -80,7 +81,7 @@ export default async function RutinaPage({ searchParams }: { searchParams: { dia
     wellnessScore025 != null && reglasWellness.some((r) => cumpleRegla(wellnessScore025, r));
 
   // Calcular peso sugerido por ejercicio (solo cuando hay ejercicios)
-  const registros = await getRegistrosByJugador(payload!.id as string);
+  const registros = await getRegistrosByJugador(payload.id as string);
   const sugerencias: Record<string, number> = {};
   for (const ej of ejercicios) {
     const registrosEj = registros
