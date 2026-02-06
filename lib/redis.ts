@@ -7,13 +7,20 @@ declare global {
 
 function getClient(): Redis {
   const url = process.env.SANMARTIN_REDIS_URL || process.env.REDIS_URL;
-  if (!url) throw new Error('SANMARTIN_REDIS_URL o REDIS_URL es requerido');
+  if (!url) {
+    throw new Error(
+      'Falta la URL de Redis. Configurá SANMARTIN_REDIS_URL o REDIS_URL en .env.local (copiá .env.example y rellená REDIS_URL).'
+    );
+  }
   if (globalThis.__redis) return globalThis.__redis;
   globalThis.__redis = new Redis(url);
   return globalThis.__redis;
 }
 
-const client = getClient();
+/** Cliente Redis (inicialización perezosa: solo se conecta al primer uso). */
+function client(): Redis {
+  return getClient();
+}
 
 function parse(val: string | null): unknown {
   if (val == null) return null;
@@ -24,38 +31,38 @@ function parse(val: string | null): unknown {
   }
 }
 
-/** Cliente Redis con la misma API que usaba Upstash (get/set/lpush/lrange/keys). Serializa objetos en JSON. */
+/** Cliente Redis con la misma API que usaba Upstash (get/set/lpush/lrange/keys). Serializa objetos en JSON. Inicialización perezosa. */
 export const redis = {
   async get(key: string): Promise<unknown> {
-    const val = await client.get(key);
+    const val = await client().get(key);
     return parse(val);
   },
   async set(key: string, value: unknown): Promise<void> {
     const str = typeof value === 'string' ? value : JSON.stringify(value);
-    await client.set(key, str);
+    await client().set(key, str);
   },
   async lpush(key: string, ...values: unknown[]): Promise<number> {
     const strValues = values.map((v) => (typeof v === 'string' ? v : JSON.stringify(v)));
-    return client.lpush(key, ...strValues);
+    return client().lpush(key, ...strValues);
   },
   async lrange(key: string, start: number, stop: number): Promise<unknown[]> {
-    const arr = await client.lrange(key, start, stop);
+    const arr = await client().lrange(key, start, stop);
     return arr.map((s) => parse(s));
   },
   async keys(pattern: string): Promise<string[]> {
-    return client.keys(pattern);
+    return client().keys(pattern);
   },
   async del(key: string): Promise<number> {
-    return client.del(key);
+    return client().del(key);
   },
   async zadd(key: string, score: number, member: string): Promise<number> {
-    return client.zadd(key, score, member);
+    return client().zadd(key, score, member);
   },
   async zcount(key: string, min: number | string, max: number | string): Promise<number> {
-    return client.zcount(key, min, max);
+    return client().zcount(key, min, max);
   },
   async zrem(key: string, ...members: string[]): Promise<number> {
-    return client.zrem(key, ...members);
+    return client().zrem(key, ...members);
   },
 };
 
@@ -67,6 +74,8 @@ export interface Usuario {
   rol: 'jugador' | 'staff';
   categoria_id?: string;
   fecha_nacimiento?: string; // YYYY-MM-DD
+  /** Peso corporal en kg (opcional, para RM relativa en reportes). */
+  peso_kg?: number;
   activo: boolean;
 }
 
@@ -102,9 +111,10 @@ export interface EjercicioPlantilla {
   ayuda_alumno: string;
 }
 
-/** Config de series y RIR por semana */
+/** Config de series, repeticiones y RIR por semana */
 export interface ConfigSemana {
   series: number;
+  repeticiones?: number;
   rir: number;
   nota?: string;
 }
@@ -120,7 +130,9 @@ export interface Ejercicio {
   repeticiones: number;
   rir: number;
   orden: number;
-  /** Config por semana: { 1: {series, rir}, 2: {...}, ... } */
+  /** Nombre del circuito al que pertenece (opcional). Agrupa ejercicios en la vista del jugador. */
+  circuito_nombre?: string;
+  /** Config por semana: { 1: {series, repeticiones?, rir}, 2: {...}, ... } */
   config_por_semana?: Record<number, ConfigSemana>;
 }
 
@@ -162,6 +174,11 @@ export async function getUsuarioById(id: string): Promise<Usuario | null> {
 }
 
 export async function createUsuario(usuario: Usuario): Promise<void> {
+  await redis.set(`usuario:${usuario.id}`, usuario);
+  await redis.set(`usuario:dni:${usuario.dni}`, usuario);
+}
+
+export async function updateUsuario(usuario: Usuario): Promise<void> {
   await redis.set(`usuario:${usuario.id}`, usuario);
   await redis.set(`usuario:dni:${usuario.dni}`, usuario);
 }
@@ -246,6 +263,9 @@ export async function getEjerciciosByRutinaYDiaConAyuda(
     if (e.config_por_semana?.[semanaActual]) {
       ej.series = e.config_por_semana[semanaActual].series;
       ej.rir = e.config_por_semana[semanaActual].rir;
+      if (e.config_por_semana[semanaActual].repeticiones != null) {
+        ej.repeticiones = e.config_por_semana[semanaActual].repeticiones!;
+      }
       if (e.config_por_semana[semanaActual].nota) {
         ej.nota_semana = e.config_por_semana[semanaActual].nota;
       }
@@ -332,6 +352,26 @@ export async function getAsistenciasPorFecha(fecha: string): Promise<Asistencia[
   return asistencias.filter((a) => a && a.fecha === fecha) as Asistencia[];
 }
 
+/** Fechas en las que el jugador tuvo asistencia registrada, dentro del rango [fechaDesde, fechaHasta] (YYYY-MM-DD). */
+export async function getAsistenciasJugadorEnRango(
+  jugadorId: string,
+  fechaDesde: string,
+  fechaHasta: string
+): Promise<string[]> {
+  const fechas: string[] = [];
+  const desde = new Date(fechaDesde);
+  const hasta = new Date(fechaHasta);
+  const current = new Date(desde);
+  while (current <= hasta) {
+    const fecha = current.toISOString().split('T')[0];
+    const key = `asistencia:${jugadorId}:${fecha}`;
+    const val = await redis.get(key);
+    if (val) fechas.push(fecha);
+    current.setDate(current.getDate() + 1);
+  }
+  return fechas;
+}
+
 /** Guarda RPE de sesión (jugador + fecha). Key: rpe_sesion:{usuario_id}:{fecha} */
 export async function saveRpeSesion(data: RpeSesion): Promise<void> {
   const key = `rpe_sesion:${data.usuario_id}:${data.fecha}`;
@@ -344,32 +384,51 @@ export async function getRpeSesion(usuarioId: string, fecha: string): Promise<Rp
   return (await redis.get(key)) as RpeSesion | null;
 }
 
-/** Cuestionario Wellness del día (antes de rutina). Puntajes 1-5 por pregunta. */
+/** Cuestionario Wellness del día (antes de rutina). Score 0-25. */
 export interface WellnessSesion {
   usuario_id: string;
   fecha: string;
-  score: number; // promedio de respuestas 1-5
-  respuestas: Record<string, number>; // sueno, energia, dolor_muscular, estres (1-5)
+  score: number; // 0-25 (suma de 5 preguntas 1-5 escalada)
+  respuestas: Record<string, number>; // sueno, energia, dolor_muscular, estres, motivacion (1-5)
   timestamp: string;
 }
 
-/** Regla de adaptación por wellness: si métrica cumple condición, aplicar acción. */
+/** Regla de adaptación por wellness: si score cumple condición, aplicar acción. */
 export interface ReglaWellness {
-  metric: 'bienestar' | 'cansancio';
+  metric: 'score';
   operator: '<' | '<=';
-  threshold: number; // 1-5
+  threshold: number; // 0-25
   action: 'quitar_reps' | 'quitar_series';
   amount: number;
 }
 
 const WELLNESS_RULES_KEY = 'config:wellness-rules';
 
+function normalizarRegla(r: unknown): ReglaWellness | null {
+  if (!r || typeof r !== 'object') return null;
+  const o = r as Record<string, unknown>;
+  const metric = o.metric as string;
+  const operator = (o.operator === '<' || o.operator === '<=') ? o.operator : '<';
+  const action = (o.action === 'quitar_reps' || o.action === 'quitar_series') ? o.action : 'quitar_reps';
+  const amount = Math.min(5, Math.max(1, Number(o.amount) || 1));
+  let threshold = Number(o.threshold) || 10;
+  // Migrar reglas antiguas (bienestar/cansancio 1-5) a score 0-25
+  if (metric === 'bienestar' || metric === 'cansancio') {
+    threshold = Math.round(threshold * 5);
+  }
+  threshold = Math.min(25, Math.max(0, threshold));
+  return { metric: 'score', operator, threshold, action, amount };
+}
+
 export async function getWellnessRules(): Promise<ReglaWellness[]> {
   const data = await redis.get(WELLNESS_RULES_KEY);
-  if (data && Array.isArray(data) && data.length > 0) return data as ReglaWellness[];
+  if (data && Array.isArray(data) && data.length > 0) {
+    const normalizadas = (data as unknown[]).map(normalizarRegla).filter(Boolean) as ReglaWellness[];
+    if (normalizadas.length > 0) return normalizadas;
+  }
   return [
-    { metric: 'bienestar', operator: '<', threshold: 2, action: 'quitar_reps', amount: 1 },
-    { metric: 'cansancio', operator: '<', threshold: 2, action: 'quitar_series', amount: 1 },
+    { metric: 'score', operator: '<', threshold: 10, action: 'quitar_reps', amount: 1 },
+    { metric: 'score', operator: '<', threshold: 8, action: 'quitar_series', amount: 1 },
   ];
 }
 
@@ -493,6 +552,8 @@ export interface EjercicioEnRutinaInput {
   ejercicio_plantilla_id: string;
   dia: string;
   orden: number;
+  /** Nombre del circuito (opcional). Si se envía, la vista del jugador agrupa por circuito. */
+  circuito_nombre?: string;
   config_por_semana: Record<number, ConfigSemana>;
 }
 

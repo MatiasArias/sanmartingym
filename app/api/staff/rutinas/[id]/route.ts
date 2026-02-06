@@ -74,6 +74,7 @@ export async function PUT(
         ejercicio_plantilla_id: e.ejercicio_plantilla_id,
         dia: e.dia,
         orden: e.orden,
+        circuito_nombre: e.circuito_nombre,
         config_por_semana: e.config_por_semana,
       })),
       data.semanas

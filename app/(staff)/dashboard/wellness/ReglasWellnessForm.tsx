@@ -9,11 +9,6 @@ interface ReglasWellnessFormProps {
   reglasIniciales: ReglaWellness[];
 }
 
-const METRIC_LABEL: Record<string, string> = {
-  bienestar: 'Bienestar (sueño + energía)',
-  cansancio: 'Cansancio / estrés',
-};
-
 const ACTION_LABEL: Record<string, string> = {
   quitar_reps: 'Quitar repeticiones',
   quitar_series: 'Quitar series',
@@ -34,7 +29,7 @@ export default function ReglasWellnessForm({ reglasIniciales }: ReglasWellnessFo
   const agregarRegla = () => {
     setReglas((prev) => [
       ...prev,
-      { metric: 'bienestar', operator: '<', threshold: 2, action: 'quitar_reps', amount: 1 },
+      { metric: 'score', operator: '<', threshold: 10, action: 'quitar_reps', amount: 1 },
     ]);
   };
 
@@ -43,6 +38,7 @@ export default function ReglasWellnessForm({ reglasIniciales }: ReglasWellnessFo
   };
 
   const actualizarRegla = (index: number, field: keyof ReglaWellness, value: ReglaWellness[keyof ReglaWellness]) => {
+    if (field === 'metric') return; // metric siempre 'score'
     setReglas((prev) => {
       const next = [...prev];
       (next[index] as unknown as Record<string, unknown>)[field] = value;
@@ -55,10 +51,11 @@ export default function ReglasWellnessForm({ reglasIniciales }: ReglasWellnessFo
     setError('');
     setMensaje('');
     try {
+      const rulesToSave = reglas.map((r) => ({ ...r, metric: 'score' as const }));
       const res = await fetch('/api/staff/wellness-rules', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rules: reglas }),
+        body: JSON.stringify({ rules: rulesToSave }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Error al guardar');
@@ -78,25 +75,14 @@ export default function ReglasWellnessForm({ reglasIniciales }: ReglasWellnessFo
         Reglas de adaptación
       </h2>
       <p className="text-sm text-gray-600 mb-4">
-        Si el jugador completa el cuestionario y una métrica cumple la condición, se aplica la acción a la rutina del día.
+        Si el score wellness del jugador (0-25) cumple la condición, se aplica la acción a la rutina del día. Score bajo = más cansancio o malestar.
       </p>
 
       <div className="space-y-4">
         {reglas.map((r, index) => (
           <div key={index} className="flex flex-wrap items-end gap-3 p-4 bg-gray-50 rounded-lg border border-gray-200">
-            <div className="flex-1 min-w-[140px]">
-              <label className="block text-xs font-medium text-gray-500 mb-1">Métrica</label>
-              <select
-                value={r.metric}
-                onChange={(e) => actualizarRegla(index, 'metric', e.target.value as 'bienestar' | 'cansancio')}
-                className="w-full py-2 px-3 border border-gray-300 rounded-lg text-sm"
-              >
-                <option value="bienestar">{METRIC_LABEL.bienestar}</option>
-                <option value="cansancio">{METRIC_LABEL.cansancio}</option>
-              </select>
-            </div>
             <div className="min-w-[140px]">
-              <label className="block text-xs font-medium text-gray-500 mb-1">Si</label>
+              <label className="block text-xs font-medium text-gray-500 mb-1">Si score</label>
               <select
                 value={r.operator}
                 onChange={(e) => actualizarRegla(index, 'operator', e.target.value as '<' | '<=')}
@@ -106,14 +92,14 @@ export default function ReglasWellnessForm({ reglasIniciales }: ReglasWellnessFo
                 <option value="<=">{OPERATOR_LABEL['<=']}</option>
               </select>
             </div>
-            <div className="w-14">
-              <label className="block text-xs font-medium text-gray-500 mb-1">Umbral (1-5)</label>
+            <div className="w-16">
+              <label className="block text-xs font-medium text-gray-500 mb-1">Umbral (0-25)</label>
               <input
                 type="number"
-                min={1}
-                max={5}
+                min={0}
+                max={25}
                 value={r.threshold}
-                onChange={(e) => actualizarRegla(index, 'threshold', parseInt(e.target.value, 10) || 1)}
+                onChange={(e) => actualizarRegla(index, 'threshold', parseInt(e.target.value, 10) || 0)}
                 className="w-full py-2 px-2 border border-gray-300 rounded-lg text-sm"
               />
             </div>

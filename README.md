@@ -42,6 +42,22 @@ Usa `REDIS_URL` (o `SANMARTIN_REDIS_URL`) de `.env.local`. Incluye:
 - **Juan Pérez** (DNI `45123456`) con **un mes de progreso**: 10 asistencias y registros de carga (peso/reps) en lunes, miércoles y viernes.
 - **Staff:** DNI `20345678` (Lucas Salvador).
 
+## Limpieza de producción
+
+Para dejar producción con solo dos usuarios (jugador PERSONAL + staff), borrando el resto de jugadores, progresos, rutinas y staff:
+
+```bash
+# Con la URL de Redis de producción
+SANMARTIN_REDIS_URL="redis://..." node scripts/cleanup-produccion.mjs
+```
+
+Quedan:
+
+- **Matias Arias** — DNI `43132313` — Jugador, categoría PERSONAL (19/01/2001).
+- **Lucas Salvador** — DNI `43132344` — Staff (21/03/2001).
+
+Se eliminan usuarios, categorías, rutinas, ejercicios de rutina, registros de carga, asistencias, RPE, wellness y comentarios. Se mantienen las plantillas de ejercicios y las reglas de wellness.
+
 ## Despliegue (Vercel, etc.)
 
 1. En Vercel asegúrate de tener **SANMARTIN_REDIS_URL** (o **REDIS_URL**) y **JWT_SECRET** para producción.

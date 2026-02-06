@@ -9,7 +9,15 @@ const PREGUNTAS = [
   { id: 'energia', label: '¿Cuánta energía tenés hoy?', low: 'Nada', high: 'Mucha' },
   { id: 'dolor_muscular', label: '¿Dolor o molestia muscular?', low: 'Mucho', high: 'Nada' },
   { id: 'estres', label: '¿Nivel de estrés o cansancio mental?', low: 'Muy alto', high: 'Bajo' },
+  { id: 'motivacion', label: '¿Motivación para entrenar hoy?', low: 'Nada', high: 'Mucha' },
 ] as const;
+
+/** Suma de 5 respuestas 1-5 = 5-25; escalado a 0-25 */
+function calcularScore025(respuestas: Record<string, number>): number {
+  const ids = PREGUNTAS.map((p) => p.id);
+  const sum = ids.reduce((acc, id) => acc + (respuestas[id] ?? 3), 0);
+  return Math.round(((sum - 5) / 20) * 25);
+}
 
 interface CuestionarioWellnessProps {
   /** Si está dentro de un modal: al omitir o al enviar con éxito se llama para cerrar */
@@ -23,6 +31,7 @@ export default function CuestionarioWellness({ onClose }: CuestionarioWellnessPr
     energia: 3,
     dolor_muscular: 3,
     estres: 3,
+    motivacion: 3,
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -50,24 +59,16 @@ export default function CuestionarioWellness({ onClose }: CuestionarioWellnessPr
     }
   };
 
-  const promedio = Object.values(valores).reduce((a, b) => a + b, 0) / Object.keys(valores).length;
-  const scoreRedondeado = Math.round(promedio * 10) / 10;
-  const bienestar = ((valores.sueno ?? 3) + (valores.energia ?? 3)) / 2;
-  const cansancio = valores.estres ?? 3;
-
-  const handleOmitir = () => {
-    if (onClose) onClose();
-    else router.refresh();
-  };
+  const score025 = calcularScore025(valores);
 
   return (
     <div className="bg-white rounded-xl shadow-md p-6 border-l-4 border-sanmartin-red">
       <h2 className="font-bold text-gray-900 flex items-center gap-2 mb-2">
         <Heart className="text-sanmartin-red" size={24} />
-        Cuestionario Wellness <span className="text-xs font-normal text-gray-500">(opcional)</span>
+        Cuestionario Wellness
       </h2>
       <p className="text-sm text-gray-600 mb-6">
-        Contanos cómo te sentís (1 a 5). Según tus respuestas, la rutina puede mostrarse con menos series o repeticiones para que te recuperes mejor.
+        Contanos cómo te sentís (1 a 5). Debes completar este cuestionario para ver tu rutina del día. Según tus respuestas, la rutina puede mostrarse con menos series o repeticiones para que te recuperes mejor.
       </p>
 
         <div className="space-y-6">
@@ -97,30 +98,21 @@ export default function CuestionarioWellness({ onClose }: CuestionarioWellnessPr
 
         <div className="mt-6 pt-4 border-t border-gray-100">
           <p className="text-sm text-gray-600 mb-2">
-            Puntaje hoy: <strong className="text-sanmartin-red">{scoreRedondeado}/5</strong> (bienestar: {bienestar.toFixed(1)}, cansancio/estrés: {cansancio})
-            {(bienestar < 2 || cansancio < 2) && (
+            Puntaje hoy: <strong className="text-sanmartin-red">{score025}/25</strong>
+            {score025 < 13 && (
               <span className="block text-xs text-amber-600 mt-1">
                 La rutina se adaptará con menos series o repeticiones según las reglas del staff.
               </span>
             )}
           </p>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={handleOmitir}
-              className="flex-1 py-3 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200"
-            >
-              {onClose ? 'Cerrar' : 'Omitir — ver rutina'}
-            </button>
-            <button
-              type="button"
-              onClick={handleSubmit}
-              disabled={loading}
-              className="flex-1 py-3 bg-sanmartin-red text-white rounded-xl font-semibold hover:bg-red-700 disabled:opacity-50"
-            >
-              {loading ? 'Guardando...' : 'Enviar'}
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={handleSubmit}
+            disabled={loading}
+            className="w-full py-3 bg-sanmartin-red text-white rounded-xl font-semibold hover:bg-red-700 disabled:opacity-50"
+          >
+            {loading ? 'Guardando...' : 'Enviar y ver rutina'}
+          </button>
         </div>
 
         {error && (

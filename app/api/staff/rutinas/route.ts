@@ -8,6 +8,7 @@ const TIPOS_DIA = ['partido', 'descanso', 'ejercicio'] as const;
 
 const configSemanaSchema = z.object({
   series: z.number().int().min(1),
+  repeticiones: z.number().int().min(1).optional(),
   rir: z.number().int().min(0),
   nota: z.string().optional(),
 });
@@ -17,6 +18,7 @@ const ejercicioSchema = z.object({
   ejercicio_plantilla_id: z.string().min(1),
   dia: z.enum(DIAS_VALIDOS),
   orden: z.number().int().min(0),
+  circuito_nombre: z.string().optional(),
   config_por_semana: z.record(z.union([z.string(), z.number()]), configSemanaSchema),
 });
 
@@ -60,6 +62,7 @@ export async function POST(request: NextRequest) {
           ejercicio_plantilla_id: e.ejercicio_plantilla_id,
           dia: e.dia,
           orden: e.orden,
+          circuito_nombre: e.circuito_nombre,
           config_por_semana: e.config_por_semana,
         })),
         data.semanas

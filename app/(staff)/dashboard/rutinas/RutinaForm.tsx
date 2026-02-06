@@ -9,6 +9,7 @@ const DIAS_SEMANA = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabad
 
 interface ConfigSemana {
   series: number;
+  repeticiones?: number;
   rir: number;
   nota?: string;
 }
@@ -20,9 +21,16 @@ interface EjercicioEnDia {
   config_por_semana: Record<number, ConfigSemana>;
 }
 
+/** Circuito: bloque con nombre que agrupa ejercicios en un día */
+interface CircuitoEnDia {
+  nombre: string;
+  ejercicios: EjercicioEnDia[];
+}
+
 interface DiaConfig {
   tipo: TipoDia;
-  ejercicios: EjercicioEnDia[];
+  /** Lista de circuitos (cada uno con nombre y ejercicios). Si está vacío o sin circuitos, se trata como un solo bloque sin nombre. */
+  circuitos: CircuitoEnDia[];
 }
 
 interface RutinaFormProps {
@@ -45,9 +53,14 @@ function buildConfigPorSemana(
   for (let s = 1; s <= semanas; s++) {
     const base = existente?.[s] ?? {
       series: plantilla?.series_default ?? 3,
+      repeticiones: plantilla?.repeticiones_default,
       rir: plantilla?.rir_default ?? 2,
     };
-    result[s] = { ...base, nota: base.nota ?? '' };
+    result[s] = {
+      ...base,
+      repeticiones: base.repeticiones ?? plantilla?.repeticiones_default ?? 10,
+      nota: base.nota ?? '',
+    };
   }
   return result;
 }
@@ -82,26 +95,42 @@ export default function RutinaForm({
       }, {});
 
     for (const dia of DIAS_SEMANA) {
-      const ejDia = ejerciciosPorDia[dia] ?? [];
+      const ejDia = (ejerciciosPorDia[dia] ?? []).sort((a, b) => a.orden - b.orden);
       const tipoFromRutina = rutina?.dias_config?.[dia];
+      // Agrupar por circuito_nombre preservando orden
+      const circuitos: CircuitoEnDia[] = [];
+      let currentCircuito: CircuitoEnDia | null = null;
+      for (let i = 0; i < ejDia.length; i++) {
+        const e = ejDia[i];
+        const circuitoNombre = e.circuito_nombre?.trim() ?? '';
+        const plant = e.ejercicio_plantilla_id
+          ? plantillas.find((p) => p.id === e.ejercicio_plantilla_id)
+          : undefined;
+        const baseConfig = e.config_por_semana ?? {
+          1: { series: e.series, repeticiones: e.repeticiones, rir: e.rir },
+        };
+        const ejEnDia: EjercicioEnDia = {
+          id: e.id,
+          ejercicio_plantilla_id: e.ejercicio_plantilla_id!,
+          orden: i,
+          config_por_semana: buildConfigPorSemana(semanasDefault, plant, baseConfig),
+        };
+        if (
+          currentCircuito &&
+          (currentCircuito.nombre === circuitoNombre || (!currentCircuito.nombre && !circuitoNombre))
+        ) {
+          currentCircuito.ejercicios.push(ejEnDia);
+        } else {
+          currentCircuito = { nombre: circuitoNombre, ejercicios: [ejEnDia] };
+          circuitos.push(currentCircuito);
+        }
+      }
+      if (circuitos.length === 0 && tipoFromRutina === 'ejercicio') {
+        circuitos.push({ nombre: '', ejercicios: [] });
+      }
       inicial[dia] = {
         tipo: tipoFromRutina ?? (ejDia.length > 0 ? 'ejercicio' : 'descanso'),
-        ejercicios: ejDia
-          .sort((a, b) => a.orden - b.orden)
-          .map((e, i) => {
-            const plant = e.ejercicio_plantilla_id
-              ? plantillas.find((p) => p.id === e.ejercicio_plantilla_id)
-              : undefined;
-            const baseConfig = e.config_por_semana ?? {
-              1: { series: e.series, rir: e.rir },
-            };
-            return {
-              id: e.id,
-              ejercicio_plantilla_id: e.ejercicio_plantilla_id!,
-              orden: i,
-              config_por_semana: buildConfigPorSemana(semanasDefault, plant, baseConfig),
-            };
-          }),
+        circuitos: circuitos.length > 0 ? circuitos : [{ nombre: '', ejercicios: [] }],
       };
     }
     return inicial;
@@ -112,73 +141,111 @@ export default function RutinaForm({
       ...prev,
       [dia]: {
         tipo,
-        ejercicios: tipo === 'ejercicio' ? prev[dia]?.ejercicios ?? [] : [],
+        circuitos: tipo === 'ejercicio' ? [{ nombre: '', ejercicios: [] }] : [],
       },
     }));
     setShowAddDia(null);
   };
 
-  const addEjercicioADia = (dia: string, plantillaId: string) => {
-    const plantilla = getPlantillaById(plantillas, plantillaId);
-    if (!plantilla) return;
-
-    const config = buildConfigPorSemana(semanas, plantilla);
+  const addCircuito = (dia: string) => {
     setDiasConfig((prev) => {
-      const diaActual = prev[dia] ?? { tipo: 'ejercicio', ejercicios: [] };
-      const orden = diaActual.ejercicios.length;
+      const diaActual = prev[dia] ?? { tipo: 'ejercicio', circuitos: [{ nombre: '', ejercicios: [] }] };
       return {
         ...prev,
         [dia]: {
           ...diaActual,
           tipo: 'ejercicio',
-          ejercicios: [
-            ...diaActual.ejercicios,
-            { ejercicio_plantilla_id: plantillaId, orden, config_por_semana: config },
-          ],
+          circuitos: [...diaActual.circuitos, { nombre: '', ejercicios: [] }],
         },
       };
+    });
+  };
+
+  const setCircuitoNombre = (dia: string, circuitIdx: number, nombre: string) => {
+    setDiasConfig((prev) => {
+      const diaActual = prev[dia];
+      if (!diaActual) return prev;
+      const circuitos = [...diaActual.circuitos];
+      if (circuitos[circuitIdx] == null) return prev;
+      circuitos[circuitIdx] = { ...circuitos[circuitIdx], nombre };
+      return { ...prev, [dia]: { ...diaActual, circuitos } };
+    });
+  };
+
+  const removeCircuito = (dia: string, circuitIdx: number) => {
+    setDiasConfig((prev) => {
+      const diaActual = prev[dia];
+      if (!diaActual) return prev;
+      const circuitos = diaActual.circuitos.filter((_, i) => i !== circuitIdx);
+      return {
+        ...prev,
+        [dia]: { ...diaActual, circuitos: circuitos.length > 0 ? circuitos : [{ nombre: '', ejercicios: [] }] },
+      };
+    });
+  };
+
+  const addEjercicioACircuito = (dia: string, circuitIdx: number, plantillaId: string) => {
+    const plantilla = getPlantillaById(plantillas, plantillaId);
+    if (!plantilla) return;
+
+    const config = buildConfigPorSemana(semanas, plantilla);
+    setDiasConfig((prev) => {
+      const diaActual = prev[dia] ?? { tipo: 'ejercicio', circuitos: [{ nombre: '', ejercicios: [] }] };
+      const circuitos = [...diaActual.circuitos];
+      const circ = circuitos[circuitIdx];
+      if (!circ) return prev;
+      const orden = circ.ejercicios.length;
+      circuitos[circuitIdx] = {
+        ...circ,
+        ejercicios: [...circ.ejercicios, { ejercicio_plantilla_id: plantillaId, orden, config_por_semana: config }],
+      };
+      return { ...prev, [dia]: { ...diaActual, circuitos } };
     });
     setShowAddDia(null);
   };
 
-  const removeEjercicioDeDia = (dia: string, idx: number) => {
+  const removeEjercicioDeCircuito = (dia: string, circuitIdx: number, ejIdx: number) => {
     setDiasConfig((prev) => {
       const diaActual = prev[dia];
       if (!diaActual) return prev;
-      const nuevas = diaActual.ejercicios.filter((_, i) => i !== idx);
-      return {
-        ...prev,
-        [dia]: {
-          ...diaActual,
-          ejercicios: nuevas.map((e, i) => ({ ...e, orden: i })),
-        },
-      };
+      const circuitos = [...diaActual.circuitos];
+      const circ = circuitos[circuitIdx];
+      if (!circ) return prev;
+      const ejercicios = circ.ejercicios.filter((_, i) => i !== ejIdx).map((e, i) => ({ ...e, orden: i }));
+      circuitos[circuitIdx] = { ...circ, ejercicios };
+      return { ...prev, [dia]: { ...diaActual, circuitos } };
     });
   };
 
   const updateConfigSemana = (
     dia: string,
+    circuitIdx: number,
     ejIdx: number,
     semana: number,
-    field: 'series' | 'rir' | 'nota',
+    field: 'series' | 'repeticiones' | 'rir' | 'nota',
     value: number | string
   ) => {
     setDiasConfig((prev) => {
       const diaActual = prev[dia];
       if (!diaActual) return prev;
-      const ej = diaActual.ejercicios[ejIdx];
+      const circ = diaActual.circuitos[circuitIdx];
+      if (!circ) return prev;
+      const ej = circ.ejercicios[ejIdx];
       if (!ej) return prev;
       const plantilla = getPlantillaById(plantillas, ej.ejercicio_plantilla_id);
       const config = { ...ej.config_por_semana };
       const actual = config[semana] ?? {
         series: plantilla?.series_default ?? 3,
+        repeticiones: plantilla?.repeticiones_default ?? 10,
         rir: plantilla?.rir_default ?? 2,
         nota: '',
       };
       config[semana] = { ...actual, [field]: value };
-      const nuevas = [...diaActual.ejercicios];
-      nuevas[ejIdx] = { ...ej, config_por_semana: config };
-      return { ...prev, [dia]: { ...diaActual, ejercicios: nuevas } };
+      const ejercicios = [...circ.ejercicios];
+      ejercicios[ejIdx] = { ...ej, config_por_semana: config };
+      const circuitos = [...diaActual.circuitos];
+      circuitos[circuitIdx] = { ...circ, ejercicios };
+      return { ...prev, [dia]: { ...diaActual, circuitos } };
     });
   };
 
@@ -201,6 +268,7 @@ export default function RutinaForm({
       ejercicio_plantilla_id: string;
       dia: string;
       orden: number;
+      circuito_nombre?: string;
       config_por_semana: Record<number, ConfigSemana>;
     }> = [];
 
@@ -209,18 +277,22 @@ export default function RutinaForm({
       const tipo = dc?.tipo ?? 'descanso';
       dias_config[dia] = tipo;
 
-      if (tipo === 'ejercicio' && dc?.ejercicios) {
-        for (let i = 0; i < dc.ejercicios.length; i++) {
-          const ej = dc.ejercicios[i];
-          const plantilla = getPlantillaById(plantillas, ej.ejercicio_plantilla_id);
-          const configCompleto = buildConfigPorSemana(semanas, plantilla, ej.config_por_semana);
-          ejerciciosPayload.push({
-            id: ej.id,
-            ejercicio_plantilla_id: ej.ejercicio_plantilla_id,
-            dia,
-            orden: i,
-            config_por_semana: configCompleto,
-          });
+      if (tipo === 'ejercicio' && dc?.circuitos) {
+        let ordenGlobal = 0;
+        for (const circuito of dc.circuitos) {
+          for (let i = 0; i < circuito.ejercicios.length; i++) {
+            const ej = circuito.ejercicios[i];
+            const plantilla = getPlantillaById(plantillas, ej.ejercicio_plantilla_id);
+            const configCompleto = buildConfigPorSemana(semanas, plantilla, ej.config_por_semana);
+            ejerciciosPayload.push({
+              id: ej.id,
+              ejercicio_plantilla_id: ej.ejercicio_plantilla_id,
+              dia,
+              orden: ordenGlobal++,
+              circuito_nombre: circuito.nombre?.trim() || undefined,
+              config_por_semana: configCompleto,
+            });
+          }
         }
       }
     }
@@ -410,102 +482,146 @@ export default function RutinaForm({
                 )}
 
                 {dc.tipo === 'ejercicio' && (
-                  <div className="space-y-3">
-                    {dc.ejercicios.map((ej, ejIdx) => {
-                      const plantilla = getPlantillaById(plantillas, ej.ejercicio_plantilla_id);
-                      return (
-                        <div
-                          key={ejIdx}
-                          className="border border-gray-200 rounded-lg p-3 bg-gray-50"
-                        >
-                          <div className="flex items-center justify-between mb-2">
-                            <span className="font-medium text-gray-900">
-                              {plantilla?.nombre ?? 'Ejercicio'}
-                            </span>
+                  <div className="space-y-4">
+                    {(dc.circuitos ?? [{ nombre: '', ejercicios: [] }]).map((circuito, circuitIdx) => (
+                      <div key={circuitIdx} className="border border-gray-300 rounded-xl p-4 bg-gray-50/80 space-y-3">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <input
+                            type="text"
+                            value={circuito.nombre}
+                            onChange={(e) => setCircuitoNombre(dia, circuitIdx, e.target.value)}
+                            placeholder="Nombre del circuito (ej: Fuerza 1)"
+                            className="flex-1 min-w-[180px] px-3 py-2 border border-gray-300 rounded-lg font-medium text-gray-900 bg-white"
+                          />
+                          {dc.circuitos.length > 1 && (
                             <button
                               type="button"
-                              onClick={() => removeEjercicioDeDia(dia, ejIdx)}
-                              className="text-red-600 hover:text-red-700 p-1"
+                              onClick={() => removeCircuito(dia, circuitIdx)}
+                              className="text-red-600 hover:text-red-700 p-2 border border-red-200 rounded-lg hover:bg-red-50"
+                              title="Quitar circuito"
                             >
                               <Trash2 size={16} />
                             </button>
-                          </div>
-                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                            {Array.from({ length: semanas }, (_, i) => i + 1).map((sem) => (
-                              <div key={sem} className="text-xs border border-gray-200 rounded-lg p-2 bg-white">
-                                <span className="block text-gray-600 font-medium mb-2">Sem {sem}</span>
-                                <div className="space-y-1.5">
-                                  <div>
-                                    <label className="block text-gray-500 mb-0.5">Series</label>
-                                    <input
-                                      type="number"
-                                      min={1}
-                                      value={ej.config_por_semana[sem]?.series ?? plantilla?.series_default ?? 3}
-                                      onChange={(e) =>
-                                        updateConfigSemana(dia, ejIdx, sem, 'series', Number(e.target.value) || 1)
-                                      }
-                                      className="w-full px-2 py-1 border rounded text-sm"
-                                    />
-                                  </div>
-                                  <div>
-                                    <label className="block text-gray-500 mb-0.5">RIR</label>
-                                    <input
-                                      type="number"
-                                      min={0}
-                                      value={ej.config_por_semana[sem]?.rir ?? plantilla?.rir_default ?? 2}
-                                      onChange={(e) =>
-                                        updateConfigSemana(dia, ejIdx, sem, 'rir', Number(e.target.value) || 0)
-                                      }
-                                      className="w-full px-2 py-1 border rounded text-sm"
-                                    />
-                                  </div>
-                                  <div>
-                                    <label className="block text-gray-500 mb-0.5">Nota (opcional)</label>
-                                    <input
-                                      type="text"
-                                      value={ej.config_por_semana[sem]?.nota ?? ''}
-                                      onChange={(e) =>
-                                        updateConfigSemana(dia, ejIdx, sem, 'nota', e.target.value)
-                                      }
-                                      placeholder="Ej: subir peso, técnica..."
-                                      className="w-full px-2 py-1 border rounded text-sm"
-                                    />
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
+                          )}
                         </div>
-                      );
-                    })}
-
-                    {plantillas.length > 0 && (
-                      <div className="flex gap-2">
-                        <select
-                          id={`add-${dia}`}
-                          className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm"
-                        >
-                          <option value="">Agregar ejercicio...</option>
-                          {plantillas.map((p) => (
-                            <option key={p.id} value={p.id}>{p.nombre}</option>
-                          ))}
-                        </select>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const sel = document.getElementById(`add-${dia}`) as HTMLSelectElement;
-                            const val = sel?.value;
-                            if (val) {
-                              addEjercicioADia(dia, val);
-                              sel.value = '';
-                            }
-                          }}
-                          className="px-4 py-2 bg-sanmartin-red text-white rounded-lg hover:bg-red-700 text-sm font-medium"
-                        >
-                          <Plus size={18} />
-                        </button>
+                        {circuito.ejercicios.map((ej, ejIdx) => {
+                          const plantilla = getPlantillaById(plantillas, ej.ejercicio_plantilla_id);
+                          return (
+                            <div
+                              key={ejIdx}
+                              className="border border-gray-200 rounded-lg p-3 bg-white"
+                            >
+                              <div className="flex items-center justify-between mb-2">
+                                <span className="font-medium text-gray-900">
+                                  {plantilla?.nombre ?? 'Ejercicio'}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => removeEjercicioDeCircuito(dia, circuitIdx, ejIdx)}
+                                  className="text-red-600 hover:text-red-700 p-1"
+                                >
+                                  <Trash2 size={16} />
+                                </button>
+                              </div>
+                              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                {Array.from({ length: semanas }, (_, i) => i + 1).map((sem) => (
+                                  <div key={sem} className="text-xs border border-gray-200 rounded-lg p-2 bg-gray-50">
+                                    <span className="block text-gray-600 font-medium mb-2">Sem {sem}</span>
+                                    <div className="space-y-1.5">
+                                      <div>
+                                        <label className="block text-gray-500 mb-0.5">Series</label>
+                                        <input
+                                          type="number"
+                                          min={1}
+                                          value={ej.config_por_semana[sem]?.series ?? plantilla?.series_default ?? 3}
+                                          onChange={(e) =>
+                                            updateConfigSemana(dia, circuitIdx, ejIdx, sem, 'series', Number(e.target.value) || 1)
+                                          }
+                                          className="w-full px-2 py-1 border rounded text-sm"
+                                        />
+                                      </div>
+                                      <div>
+                                        <label className="block text-gray-500 mb-0.5">Repeticiones</label>
+                                        <input
+                                          type="number"
+                                          min={1}
+                                          value={ej.config_por_semana[sem]?.repeticiones ?? plantilla?.repeticiones_default ?? 10}
+                                          onChange={(e) =>
+                                            updateConfigSemana(dia, circuitIdx, ejIdx, sem, 'repeticiones', Number(e.target.value) || 1)
+                                          }
+                                          className="w-full px-2 py-1 border rounded text-sm"
+                                        />
+                                      </div>
+                                      <div>
+                                        <label className="block text-gray-500 mb-0.5">RIR</label>
+                                        <input
+                                          type="number"
+                                          min={0}
+                                          value={ej.config_por_semana[sem]?.rir ?? plantilla?.rir_default ?? 2}
+                                          onChange={(e) =>
+                                            updateConfigSemana(dia, circuitIdx, ejIdx, sem, 'rir', Number(e.target.value) || 0)
+                                          }
+                                          className="w-full px-2 py-1 border rounded text-sm"
+                                        />
+                                      </div>
+                                      <div>
+                                        <label className="block text-gray-500 mb-0.5">Nota (opcional)</label>
+                                        <input
+                                          type="text"
+                                          value={ej.config_por_semana[sem]?.nota ?? ''}
+                                          onChange={(e) =>
+                                            updateConfigSemana(dia, circuitIdx, ejIdx, sem, 'nota', e.target.value)
+                                          }
+                                          placeholder="Ej: subir peso..."
+                                          className="w-full px-2 py-1 border rounded text-sm"
+                                        />
+                                      </div>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        })}
+                        {plantillas.length > 0 && (
+                          <div className="flex gap-2">
+                            <select
+                              id={`add-${dia}-${circuitIdx}`}
+                              className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                            >
+                              <option value="">Agregar ejercicio a este circuito...</option>
+                              {plantillas.map((p) => (
+                                <option key={p.id} value={p.id}>{p.nombre}</option>
+                              ))}
+                            </select>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const sel = document.getElementById(`add-${dia}-${circuitIdx}`) as HTMLSelectElement;
+                                const val = sel?.value;
+                                if (val) {
+                                  addEjercicioACircuito(dia, circuitIdx, val);
+                                  sel.value = '';
+                                }
+                              }}
+                              className="px-4 py-2 bg-sanmartin-red text-white rounded-lg hover:bg-red-700 text-sm font-medium"
+                            >
+                              <Plus size={18} />
+                            </button>
+                          </div>
+                        )}
                       </div>
-                    )}
+                    ))}
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => addCircuito(dia)}
+                        className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:border-sanmartin-red hover:bg-red-50 text-gray-700 text-sm font-medium"
+                      >
+                        <Plus size={18} />
+                        Agregar circuito
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
