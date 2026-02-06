@@ -1,6 +1,6 @@
 import { getTokenPayload } from '@/lib/auth';
 import { getUsuarioById, getAllRutinas, getAllUsuarios, getComentariosNuevosCount } from '@/lib/redis';
-import { ClipboardList, Users, MessageSquare, Heart, History } from 'lucide-react';
+import { ClipboardList, Users, MessageSquare, Heart, History, Layers } from 'lucide-react';
 import Link from 'next/link';
 
 export default async function DashboardPage() {
@@ -100,6 +100,21 @@ export default async function DashboardPage() {
             <div>
               <h3 className="font-bold text-gray-900">Cargar Jugadores</h3>
               <p className="text-sm text-gray-600">DNI, nombre, categoría y fecha de nacimiento</p>
+            </div>
+          </div>
+        </Link>
+
+        <Link
+          href="/dashboard/categorias"
+          className="block bg-white p-6 rounded-xl shadow-md hover:shadow-lg transition border-l-4 border-purple-500"
+        >
+          <div className="flex items-center gap-4">
+            <div className="bg-purple-100 p-3 rounded-full">
+              <Layers className="text-purple-600" size={24} />
+            </div>
+            <div>
+              <h3 className="font-bold text-gray-900">Cargar Categorías</h3>
+              <p className="text-sm text-gray-600">Gestionar categorías para jugadores y rutinas</p>
             </div>
           </div>
         </Link>

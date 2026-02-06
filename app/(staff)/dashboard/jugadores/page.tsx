@@ -1,6 +1,6 @@
 import { getJugadores, getAllCategorias } from '@/lib/redis';
 import Link from 'next/link';
-import { TrendingUp } from 'lucide-react';
+import { TrendingUp, Layers } from 'lucide-react';
 import JugadorForm from './JugadorForm';
 import type { Usuario } from '@/lib/redis';
 
@@ -22,9 +22,16 @@ export default async function JugadoresPage() {
     <div className="p-4 space-y-6">
       <div className="bg-white rounded-xl shadow-md p-6">
         <h1 className="text-2xl font-bold text-gray-900 mb-2">Jugadores</h1>
-        <p className="text-gray-600 text-sm mb-6">
+        <p className="text-gray-600 text-sm mb-4">
           Cargá jugadores para que puedan ingresar con su DNI. Cada jugador debe tener categoría asignada para ver su rutina.
         </p>
+        <Link
+          href="/dashboard/categorias"
+          className="inline-flex items-center gap-1 text-sm text-sanmartin-red hover:underline mb-6"
+        >
+          <Layers size={14} />
+          Gestionar categorías
+        </Link>
 
         <JugadorForm categorias={categorias} />
       </div>

@@ -340,6 +340,18 @@ export async function getAllCategorias(): Promise<Categoria[]> {
   return categorias.filter(Boolean) as Categoria[];
 }
 
+export async function createCategoria(data: { nombre: string }): Promise<Categoria> {
+  const categorias = await getAllCategorias();
+  const nombreNormalizado = data.nombre.trim();
+  if (categorias.some((c) => c.nombre.toLowerCase() === nombreNormalizado.toLowerCase())) {
+    throw new Error('Ya existe una categoría con ese nombre');
+  }
+  const id = `cat-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  const categoria: Categoria = { id, nombre: nombreNormalizado };
+  await redis.set(`categoria:${id}`, categoria);
+  return categoria;
+}
+
 export async function getAllRutinas(): Promise<Rutina[]> {
   const keys = await redis.keys('rutina:*');
   const rutinas = (await Promise.all(keys.map((k) => redis.get(k)))) as (Rutina | null)[];

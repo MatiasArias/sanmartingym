@@ -32,8 +32,13 @@
 | F-JUG-03 | Categoría obligatoria | Cada jugador debe tener una categoría asignada para acceder a su rutina. | Alta |
 | F-JUG-04 | Validación DNI único | No se permiten DNI duplicados. | Alta |
 
-### Categorías predefinidas
-M15, M17, Primera, Femenino
+### Gestión de categorías (Staff)
+| ID | Requisito | Descripción | Prioridad |
+|----|-----------|-------------|-----------|
+| F-CAT-01 | Listar categorías | El staff puede ver el listado de categorías. | Alta |
+| F-CAT-02 | Crear categoría | El staff puede dar de alta nuevas categorías con nombre (ej. M15, M17, Primera). | Alta |
+
+Las categorías iniciales (M15, M17, Primera, Femenino) se crean en el seed; el staff puede agregar más.
 
 ---
 

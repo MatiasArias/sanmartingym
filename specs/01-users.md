@@ -12,7 +12,7 @@
 
 ## Overview
 
-Login por DNI, roles jugador/staff, categorías para jugadores.
+Login por DNI, roles jugador/staff, categorías para jugadores. El staff puede crear categorías desde /dashboard/categorias.
 
 ## Data Model
 

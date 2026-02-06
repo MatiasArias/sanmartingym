@@ -47,12 +47,10 @@ export default function AsistenciasPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    setCategorias([
-      { id: 'cat-m15', nombre: 'M15' },
-      { id: 'cat-m17', nombre: 'M17' },
-      { id: 'cat-primera', nombre: 'Primera' },
-      { id: 'cat-femenino', nombre: 'Femenino' },
-    ]);
+    fetch('/api/staff/categorias')
+      .then((res) => res.json())
+      .then((data) => setCategorias(data.categorias ?? []))
+      .catch(() => setCategorias([]));
   }, []);
 
   useEffect(() => {
