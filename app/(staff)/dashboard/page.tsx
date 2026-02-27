@@ -1,6 +1,7 @@
 import { getTokenPayload } from '@/lib/auth';
 import { getUsuarioById, getAllRutinas, getAllUsuarios, getComentariosNuevosCount } from '@/lib/redis';
-import { ClipboardList, Users, MessageSquare, Heart, History, Layers } from 'lucide-react';
+import { getAlertas } from '@/lib/alertas';
+import { ClipboardList, Users, MessageSquare, Heart, History, Layers, AlertTriangle, Bandage } from 'lucide-react';
 import Link from 'next/link';
 
 export default async function DashboardPage() {
@@ -10,6 +11,7 @@ export default async function DashboardPage() {
   const rutinas = await getAllRutinas();
   const usuarios = await getAllUsuarios();
   const jugadores = usuarios.filter(u => u.rol === 'jugador' && u.activo);
+  const alertas = await getAlertas();
 
   return (
     <div className="p-4 space-y-6">
@@ -55,6 +57,31 @@ export default async function DashboardPage() {
           </div>
           <span className="text-amber-600 font-bold">→</span>
         </Link>
+      )}
+
+      {/* Alertas del plantel */}
+      {alertas.length > 0 && (
+        <div className="space-y-2">
+          <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-2">
+            <AlertTriangle size={14} className="text-orange-500" />
+            Alertas ({alertas.length})
+          </h2>
+          <div className="space-y-2 max-h-48 overflow-y-auto">
+            {alertas.map((alerta, i) => (
+              <Link
+                key={i}
+                href={`/dashboard/jugadores`}
+                className="flex items-start gap-3 p-3 bg-orange-50 border border-orange-200 rounded-xl hover:bg-orange-100 transition text-sm"
+              >
+                <AlertTriangle size={16} className="text-orange-500 mt-0.5 shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-orange-900 truncate">{alerta.jugador_nombre}</p>
+                  <p className="text-orange-700 text-xs">{alerta.mensaje}</p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
       )}
 
       {/* Quick Actions */}
@@ -145,6 +172,21 @@ export default async function DashboardPage() {
             <div>
               <h3 className="font-bold text-gray-900">Reglas Wellness</h3>
               <p className="text-sm text-gray-600">Definir adaptación de rutina (bienestar &lt; 2 → quitar 1 rep, cansancio &lt; 2 → quitar 1 serie)</p>
+            </div>
+          </div>
+        </Link>
+
+        <Link
+          href="/dashboard/lesiones"
+          className="block bg-white p-6 rounded-xl shadow-md hover:shadow-lg transition border-l-4 border-orange-500"
+        >
+          <div className="flex items-center gap-4">
+            <div className="bg-orange-100 p-3 rounded-full">
+              <Bandage className="text-orange-600" size={24} />
+            </div>
+            <div>
+              <h3 className="font-bold text-gray-900">Gestión de Lesiones</h3>
+              <p className="text-sm text-gray-600">Registrar y seguir lesiones del plantel</p>
             </div>
           </div>
         </Link>

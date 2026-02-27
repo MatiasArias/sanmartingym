@@ -1,8 +1,21 @@
 import { getTokenPayload } from '@/lib/auth';
 import { redirect } from 'next/navigation';
-import { getUsuarioById, getRutinaActivaByCategoria, getEjerciciosByRutinaYDiaConAyuda, getDiasDeRutina, getRegistrosByJugador, getWellnessSesion, getSemanaActual, getWellnessRules, type ReglaWellness } from '@/lib/redis';
+import { config } from '@/lib/config';
+import { getFechaHoyArgentina, getDiaSemanaHoyArgentina } from '@/lib/fecha';
+import { getUsuarioById, getRutinaActivaByCategoria, getEjerciciosByRutinaYDiaConAyuda, getRegistrosByJugador, getWellnessSesion, getSemanaActual, getWellnessRules, type ReglaWellness } from '@/lib/redis';
+import type { TipoDia } from '@/lib/rutinas';
 import { sugerirPesoDesdeRegistro } from '@/lib/calculadora-peso';
 import RutinaClient from './RutinaClient';
+
+/** Días de la semana (lunes a sábado) para el selector. */
+const DIAS_SEMANA = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'] as const;
+
+/** Devuelve el día actual en español (lunes..sábado) en zona Argentina. Domingo -> sábado para tener un valor por defecto. */
+function getDiaActual(): (typeof DIAS_SEMANA)[number] {
+  const d = getDiaSemanaHoyArgentina(); // 0=domingo, 1=lunes, ..., 6=sábado
+  const index = d === 0 ? 5 : d - 1; // domingo -> sábado (índice 5)
+  return DIAS_SEMANA[index];
+}
 
 function cumpleRegla(score: number, rule: ReglaWellness): boolean {
   if (rule.metric !== 'score') return false;
@@ -57,11 +70,16 @@ export default async function RutinaPage({ searchParams }: { searchParams: { dia
     );
   }
 
-  const hoy = new Date().toISOString().split('T')[0];
+  const hoy = getFechaHoyArgentina();
   const wellness = await getWellnessSesion(payload.id as string, hoy);
 
-  const dias = await getDiasDeRutina(rutina.id);
-  const diaActual = searchParams.dia || dias[0] || 'lunes';
+  const diaHoy = getDiaActual();
+  const diaActualParam = searchParams.dia?.toLowerCase();
+  const diaActual =
+    diaActualParam && DIAS_SEMANA.includes(diaActualParam as (typeof DIAS_SEMANA)[number])
+      ? diaActualParam
+      : diaHoy;
+  const tipoDiaActual: TipoDia = rutina.dias_config?.[diaActual] ?? 'ejercicio';
 
   const reglasWellness = await getWellnessRules();
   // Normalizar score: sesiones antiguas usaban 1-5, nuevas usan 0-25
@@ -100,12 +118,15 @@ export default async function RutinaPage({ searchParams }: { searchParams: { dia
     <RutinaClient
       rutina={rutina}
       ejercicios={ejercicios}
-      dias={dias}
+      dias={[...DIAS_SEMANA]}
       diaActual={diaActual}
+      diaHoy={diaHoy}
+      tipoDiaActual={tipoDiaActual}
       semanaActual={semanaActual}
       sugerenciasPeso={sugerencias}
       wellnessScore={wellnessScore025}
       wellnessBajo={wellnessBajo ?? false}
+      wellnessObligatorio={config.wellnessObligatorio ?? false}
     />
   );
 }

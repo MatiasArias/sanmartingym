@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUsuarioByDni } from '@/lib/redis';
 import { createToken } from '@/lib/auth';
+import { config } from '@/lib/config';
+import { DNI_MIN_LENGTH, DNI_MAX_LENGTH } from '@/lib/constants';
 import { z } from 'zod';
 
 const loginSchema = z.object({
-  dni: z.string().min(7).max(8),
+  dni: z.string().min(DNI_MIN_LENGTH).max(DNI_MAX_LENGTH),
 });
 
 export async function POST(request: NextRequest) {
@@ -30,7 +32,7 @@ export async function POST(request: NextRequest) {
     const response = NextResponse.json({ usuario });
     response.cookies.set('auth_token', token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: config.nodeEnv === 'production',
       sameSite: 'lax',
       maxAge: 60 * 60 * 24 * 7, // 7 days
     });

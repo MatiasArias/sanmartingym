@@ -1,25 +1,36 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getTokenPayload } from '@/lib/auth';
+import { getFechaHoyArgentina } from '@/lib/fecha';
 import {
   getUsuarioById,
   getRegistrosByJugador,
   getAsistenciasJugadorEnRango,
   getPlantillaEjercicioById,
+  getWellnessSesionesEnRango,
+  getRpeSesionesEnRango,
   redis,
   type Usuario,
   type RegistroCarga,
   type Ejercicio,
 } from '@/lib/redis';
 
+function isoWeekStart(fecha: string): string {
+  const [y, m, d] = fecha.split('-').map(Number);
+  const date = new Date(Date.UTC(y!, m! - 1, d!, 12));
+  const day = date.getUTCDay();
+  const offset = day === 0 ? 6 : day - 1;
+  date.setUTCDate(date.getUTCDate() - offset);
+  return date.toISOString().split('T')[0]!;
+}
+
 function getRangoDesdeParams(searchParams: URLSearchParams): { desde: string; hasta: string } {
-  const hoy = new Date();
-  const hasta = searchParams.get('hasta') ?? hoy.toISOString().split('T')[0];
+  const hasta = searchParams.get('hasta') ?? getFechaHoyArgentina();
   const periodo = searchParams.get('periodo') ?? '30'; // 30, 90, 180 días
   const dias = parseInt(periodo, 10) || 30;
-  const hastaDate = new Date(hasta);
-  const desdeDate = new Date(hastaDate);
-  desdeDate.setDate(desdeDate.getDate() - dias);
-  const desde = searchParams.get('desde') ?? desdeDate.toISOString().split('T')[0];
+  const [y, m, d] = hasta.split('-').map(Number);
+  const hastaDate = new Date(y!, m! - 1, d!);
+  hastaDate.setDate(hastaDate.getDate() - dias);
+  const desde = searchParams.get('desde') ?? hastaDate.toISOString().split('T')[0];
   return { desde, hasta };
 }
 
@@ -42,9 +53,11 @@ export async function GET(
       return NextResponse.json({ error: 'Jugador no encontrado' }, { status: 404 });
     }
 
-    const [registros, fechasAsistencia] = await Promise.all([
+    const [registros, fechasAsistencia, sesionesWellness, sesionesRpe] = await Promise.all([
       getRegistrosByJugador(jugadorId),
       getAsistenciasJugadorEnRango(jugadorId, desde, hasta),
+      getWellnessSesionesEnRango(jugadorId, desde, hasta),
+      getRpeSesionesEnRango(jugadorId, desde, hasta),
     ]);
 
     const registrosEnRango = registros.filter((r) => r.fecha >= desde && r.fecha <= hasta);
@@ -113,6 +126,29 @@ export async function GET(
         : null,
     };
 
+    // ─── Volumen semanal (tonelaje = Σ peso×reps por semana) ─────────────────
+    const volumenPorSemana: Record<string, number> = {};
+    for (const r of registrosEnRango) {
+      const semana = isoWeekStart(r.fecha);
+      volumenPorSemana[semana] = (volumenPorSemana[semana] ?? 0) + r.peso * r.reps;
+    }
+    const volumenSemanal = Object.entries(volumenPorSemana)
+      .map(([semana, volumen]) => ({ semana, volumen: Math.round(volumen) }))
+      .sort((a, b) => a.semana.localeCompare(b.semana));
+
+    const wellnessPromedio =
+      sesionesWellness.length > 0
+        ? Math.round(
+            (sesionesWellness.reduce((s, w) => s + (w.score <= 5 ? w.score * 5 : w.score), 0) /
+              sesionesWellness.length) *
+              10
+          ) / 10
+        : null;
+    const rpePromedio =
+      sesionesRpe.length > 0
+        ? Math.round((sesionesRpe.reduce((s, r) => s + r.rpe, 0) / sesionesRpe.length) * 10) / 10
+        : null;
+
     return NextResponse.json({
       jugador: {
         id: jugador.id,
@@ -128,9 +164,24 @@ export async function GET(
         porcentaje: porcentajeAsistencia,
         fechas: fechasAsistencia,
       },
+      wellness: {
+        sesiones: sesionesWellness.map((w) => ({
+          fecha: w.fecha,
+          score: w.score <= 5 ? Math.round(w.score * 5) : w.score,
+          respuestas: w.respuestas,
+        })),
+        promedioScore: wellnessPromedio,
+        diasCompletados: sesionesWellness.length,
+      },
+      rpe: {
+        sesiones: sesionesRpe,
+        promedioRpe: rpePromedio,
+        diasConRpe: sesionesRpe.length,
+      },
       ejercicios: porEjercicio,
       registros: registrosEnRango,
       metricas,
+      volumenSemanal,
     });
   } catch (error) {
     console.error('Error rendimiento jugador:', error);

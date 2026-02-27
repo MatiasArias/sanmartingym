@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import ErrorMessage from '@/components/ui/ErrorMessage';
 
 export default function CategoriaForm() {
   const router = useRouter();
@@ -55,9 +56,7 @@ export default function CategoriaForm() {
           disabled={loading}
         />
       </div>
-      {error && (
-        <p className="text-sm text-red-600">{error}</p>
-      )}
+      <ErrorMessage message={error} />
       <button
         type="submit"
         disabled={loading}

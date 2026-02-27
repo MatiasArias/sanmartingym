@@ -1,7 +1,9 @@
 import { getTokenPayload } from '@/lib/auth';
+import { getFechaHoyArgentina } from '@/lib/fecha';
 import { getAllRutinas, getAllCategorias, marcarComentariosVistos } from '@/lib/redis';
 import Link from 'next/link';
-import { Eye, Calendar, Plus } from 'lucide-react';
+import { Calendar, Plus } from 'lucide-react';
+import EmptyState from '@/components/ui/EmptyState';
 
 export default async function RutinasPage() {
   const payload = await getTokenPayload();
@@ -36,11 +38,15 @@ export default async function RutinasPage() {
             <h2 className="text-xl font-bold text-gray-900 mb-4">{categoria.nombre}</h2>
             
             {ruts.length === 0 ? (
-              <p className="text-gray-500 text-sm">No hay rutinas para esta categoría</p>
+              <EmptyState
+                message="No hay rutinas para esta categoría."
+                actionLabel="Crear primera rutina"
+                actionHref="/dashboard/rutinas/nuevo"
+              />
             ) : (
               <div className="space-y-3">
                 {ruts.map(rutina => {
-                  const hoy = new Date().toISOString().split('T')[0];
+                  const hoy = getFechaHoyArgentina();
                   const activa = rutina.fecha_inicio <= hoy && rutina.fecha_fin >= hoy;
 
                   return (

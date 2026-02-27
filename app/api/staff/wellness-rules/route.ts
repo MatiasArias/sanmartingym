@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getTokenPayload } from '@/lib/auth';
 import { getWellnessRules, setWellnessRules } from '@/lib/redis';
+import { WELLNESS_SCORE_MIN, WELLNESS_SCORE_MAX } from '@/lib/constants';
 import { z } from 'zod';
 
 const reglaSchema = z.object({
   metric: z.literal('score'),
   operator: z.enum(['<', '<=']),
-  threshold: z.number().min(0).max(25),
+  threshold: z.number().min(WELLNESS_SCORE_MIN).max(WELLNESS_SCORE_MAX),
   action: z.enum(['quitar_reps', 'quitar_series']),
   amount: z.number().int().min(1).max(5),
 });

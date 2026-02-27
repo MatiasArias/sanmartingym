@@ -1,8 +1,7 @@
 import { getTokenPayload } from '@/lib/auth';
 import { redirect } from 'next/navigation';
-import { LayoutDashboard, Users, UserPlus, ClipboardList, Dumbbell } from 'lucide-react';
-import Link from 'next/link';
 import { getUsuarioById, getComentariosNuevosCount } from '@/lib/redis';
+import StaffNav from '@/components/nav/StaffNav';
 import Image from 'next/image';
 import { LogoutButton } from './LogoutButton';
 
@@ -39,33 +38,7 @@ export default async function StaffLayout({
       {/* Content */}
       <main className="pb-4">{children}</main>
 
-      {/* Bottom Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-sanmartin-black border-t border-gray-700 pb-safe">
-        <div className="grid grid-cols-5 gap-0.5 px-1 py-2">
-          <NavLink href="/dashboard" icon={<LayoutDashboard size={18} />} label="Inicio" />
-          <NavLink href="/dashboard/jugadores" icon={<UserPlus size={18} />} label="Jugadores" />
-          <NavLink href="/dashboard/ejercicios" icon={<Dumbbell size={18} />} label="Ejercicios" />
-          <NavLink href="/dashboard/rutinas" icon={<ClipboardList size={18} />} label="Rutinas" badge={comentariosNuevos} />
-          <NavLink href="/dashboard/asistencias" icon={<Users size={18} />} label="Asistencia" />
-        </div>
-      </nav>
+      <StaffNav comentariosNuevos={comentariosNuevos} />
     </div>
-  );
-}
-
-function NavLink({ href, icon, label, badge = 0 }: { href: string; icon: React.ReactNode; label: string; badge?: number }) {
-  return (
-    <Link
-      href={href}
-      className="relative flex flex-col items-center justify-center py-2 px-1 rounded-lg hover:bg-gray-800 transition text-gray-300 hover:text-white"
-    >
-      {icon}
-      {badge > 0 && (
-        <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] flex items-center justify-center bg-sanmartin-red text-white text-xs font-bold rounded-full px-1">
-          {badge > 99 ? '99+' : badge}
-        </span>
-      )}
-      <span className="text-xs mt-1">{label}</span>
-    </Link>
   );
 }

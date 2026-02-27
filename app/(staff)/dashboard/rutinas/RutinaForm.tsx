@@ -1,47 +1,36 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus, Trash2, Trophy, Moon, Dumbbell } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import type { Rutina, Ejercicio, Categoria, EjercicioPlantilla, TipoDia } from '@/lib/redis';
+import { RUTINA_SEMANAS_MIN, RUTINA_SEMANAS_MAX } from '@/lib/constants';
+import ErrorMessage from '@/components/ui/ErrorMessage';
+import Button from '@/components/ui/Button';
+import {
+  RutinaDatosBasicos,
+  RutinaDiaBloque,
+  CircuitoBloque,
+  getPlantillaById,
+  type ConfigSemanaForm,
+  type EjercicioEnDiaForm,
+  type CircuitoEnDiaForm,
+  type DiaConfigForm,
+} from './RutinaFormSubcomponents';
 
 const DIAS_SEMANA = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'] as const;
 
-interface ConfigSemana {
-  series: number;
-  repeticiones?: number;
-  rir: number;
-  nota?: string;
-}
+type ConfigSemana = ConfigSemanaForm;
 
-interface EjercicioEnDia {
-  id?: string;
-  ejercicio_plantilla_id: string;
-  orden: number;
-  config_por_semana: Record<number, ConfigSemana>;
-}
-
-/** Circuito: bloque con nombre que agrupa ejercicios en un día */
-interface CircuitoEnDia {
-  nombre: string;
-  ejercicios: EjercicioEnDia[];
-}
-
-interface DiaConfig {
-  tipo: TipoDia;
-  /** Lista de circuitos (cada uno con nombre y ejercicios). Si está vacío o sin circuitos, se trata como un solo bloque sin nombre. */
-  circuitos: CircuitoEnDia[];
-}
+type EjercicioEnDia = EjercicioEnDiaForm;
+type CircuitoEnDia = CircuitoEnDiaForm;
+type DiaConfig = DiaConfigForm;
 
 interface RutinaFormProps {
   categorias: Categoria[];
   plantillas: EjercicioPlantilla[];
   rutina?: Rutina;
   ejercicios?: Ejercicio[];
-}
-
-function getPlantillaById(plantillas: EjercicioPlantilla[], id: string): EjercicioPlantilla | undefined {
-  return plantillas.find((p) => p.id === id);
 }
 
 function buildConfigPorSemana(
@@ -83,6 +72,15 @@ export default function RutinaForm({
     rutina?.fecha_inicio ?? new Date().toISOString().split('T')[0]
   );
   const [semanas, setSemanas] = useState(semanasDefault);
+
+  /** Estado del selector en dos niveles (tipo → ejercicio) por circuito: key = `${dia}-${circuitIdx}` */
+  const [addSelectorByCircuit, setAddSelectorByCircuit] = useState<Record<string, { tipo: string; ejercicio: string }>>({});
+
+  /** Grupos musculares únicos de plantillas, ordenados alfabéticamente */
+  const gruposMusculares = useMemo(() => {
+    const grupos = Array.from(new Set(plantillas.map((p) => p.musculo_principal).filter(Boolean)));
+    return grupos.sort((a, b) => a.localeCompare(b));
+  }, [plantillas]);
 
   const [diasConfig, setDiasConfig] = useState<Record<string, DiaConfig>>(() => {
     const inicial: Record<string, DiaConfig> = {};
@@ -257,8 +255,8 @@ export default function RutinaForm({
       setError('El nombre es obligatorio');
       return;
     }
-    if (semanas < 1) {
-      setError('La rutina debe durar al menos 1 semana');
+    if (semanas < RUTINA_SEMANAS_MIN || semanas > RUTINA_SEMANAS_MAX) {
+      setError(`La rutina debe durar entre ${RUTINA_SEMANAS_MIN} y ${RUTINA_SEMANAS_MAX} semanas`);
       return;
     }
 
@@ -339,71 +337,21 @@ export default function RutinaForm({
     }
   };
 
-  const TIPO_OPCIONES: { tipo: TipoDia; icon: React.ReactNode; label: string }[] = [
-    { tipo: 'partido', icon: <Trophy size={20} />, label: 'Día de partido' },
-    { tipo: 'descanso', icon: <Moon size={20} />, label: 'Día de descanso' },
-    { tipo: 'ejercicio', icon: <Dumbbell size={20} />, label: 'Día de ejercicio' },
-  ];
-
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <p className="text-red-800 text-sm">{error}</p>
-        </div>
-      )}
+      <ErrorMessage message={error} />
 
-      {/* Datos básicos */}
-      <div className="bg-white rounded-xl shadow-md p-6 space-y-4">
-        <h2 className="text-lg font-bold text-gray-900">Datos de la rutina</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Categoría</label>
-            <select
-              value={categoriaId}
-              onChange={(e) => setCategoriaId(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2"
-              required
-            >
-              {categorias.map((c) => (
-                <option key={c.id} value={c.id}>{c.nombre}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Nombre</label>
-            <input
-              type="text"
-              value={nombre}
-              onChange={(e) => setNombre(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2"
-              placeholder="Ej: Fuerza - Pre-temporada"
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Fecha de inicio</label>
-            <input
-              type="date"
-              value={fechaInicio}
-              onChange={(e) => setFechaInicio(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2"
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Semanas de duración</label>
-            <input
-              type="number"
-              min={1}
-              max={52}
-              value={semanas}
-              onChange={(e) => setSemanas(Math.max(1, Number(e.target.value) || 1))}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2"
-            />
-          </div>
-        </div>
-      </div>
+      <RutinaDatosBasicos
+        categoriaId={categoriaId}
+        setCategoriaId={setCategoriaId}
+        nombre={nombre}
+        setNombre={setNombre}
+        fechaInicio={fechaInicio}
+        setFechaInicio={setFechaInicio}
+        semanas={semanas}
+        setSemanas={setSemanas}
+        categorias={categorias}
+      />
 
       {/* Días de la semana */}
       <div className="bg-white rounded-xl shadow-md p-6">
@@ -414,203 +362,53 @@ export default function RutinaForm({
 
         <div className="space-y-4">
           {DIAS_SEMANA.map((dia) => {
-            const dc = diasConfig[dia] ?? { tipo: 'descanso', ejercicios: [] };
+            const dc = diasConfig[dia] ?? { tipo: 'descanso', circuitos: [] };
             const mostrarOpciones = showAddDia === DIAS_SEMANA.indexOf(dia);
 
             return (
-              <div
+              <RutinaDiaBloque
                 key={dia}
-                className="border border-gray-200 rounded-xl p-4 space-y-3"
+                dia={dia}
+                dc={dc}
+                mostrarOpciones={mostrarOpciones}
+                onShowOptions={() => setShowAddDia(DIAS_SEMANA.indexOf(dia))}
+                onCancelOptions={() => setShowAddDia(null)}
+                onSetTipoDia={(tipo) => setTipoDia(dia, tipo)}
               >
-                <div className="flex items-center justify-between">
-                  <h3 className="font-semibold text-gray-900 capitalize">{dia}</h3>
-                  {dc.tipo === 'descanso' && !mostrarOpciones && (
-                    <button
-                      type="button"
-                      onClick={() => setShowAddDia(DIAS_SEMANA.indexOf(dia))}
-                      className="flex items-center gap-2 px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50"
-                    >
-                      <Plus size={16} />
-                      Configurar
-                    </button>
-                  )}
-                  {dc.tipo !== 'descanso' && !mostrarOpciones && (
-                    <div className="flex items-center gap-2">
-                      <span className={`text-xs px-2 py-1 rounded-full ${
-                        dc.tipo === 'partido' ? 'bg-amber-100 text-amber-800' :
-                        dc.tipo === 'ejercicio' ? 'bg-green-100 text-green-800' : 'bg-gray-100'
-                      }`}>
-                        {dc.tipo === 'partido' && 'Partido'}
-                        {dc.tipo === 'ejercicio' && 'Ejercicio'}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => setShowAddDia(DIAS_SEMANA.indexOf(dia))}
-                        className="text-sm text-gray-500 hover:text-gray-700 hover:underline"
-                      >
-                        Cambiar
-                      </button>
-                    </div>
-                  )}
-                </div>
-
-                {mostrarOpciones && (
-                  <div className="flex flex-wrap gap-2 p-3 bg-gray-50 rounded-lg">
-                    {TIPO_OPCIONES.map((opt) => (
-                      <button
-                        key={opt.tipo}
-                        type="button"
-                        onClick={() => setTipoDia(dia, opt.tipo)}
-                        className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:border-sanmartin-red hover:bg-red-50 transition"
-                      >
-                        {opt.icon}
-                        {opt.label}
-                      </button>
-                    ))}
-                    <button
-                      type="button"
-                      onClick={() => setShowAddDia(null)}
-                      className="px-3 py-1 text-gray-500 text-sm"
-                    >
-                      Cancelar
-                    </button>
-                  </div>
-                )}
-
-                {dc.tipo === 'partido' && !mostrarOpciones && (
-                  <p className="text-sm text-amber-700">Día de partido - sin entrenamiento</p>
-                )}
-
-                {dc.tipo === 'ejercicio' && (
-                  <div className="space-y-4">
+                <div className="space-y-4">
                     {(dc.circuitos ?? [{ nombre: '', ejercicios: [] }]).map((circuito, circuitIdx) => (
-                      <div key={circuitIdx} className="border border-gray-300 rounded-xl p-4 bg-gray-50/80 space-y-3">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <input
-                            type="text"
-                            value={circuito.nombre}
-                            onChange={(e) => setCircuitoNombre(dia, circuitIdx, e.target.value)}
-                            placeholder="Nombre del circuito (ej: Fuerza 1)"
-                            className="flex-1 min-w-[180px] px-3 py-2 border border-gray-300 rounded-lg font-medium text-gray-900 bg-white"
-                          />
-                          {dc.circuitos.length > 1 && (
-                            <button
-                              type="button"
-                              onClick={() => removeCircuito(dia, circuitIdx)}
-                              className="text-red-600 hover:text-red-700 p-2 border border-red-200 rounded-lg hover:bg-red-50"
-                              title="Quitar circuito"
-                            >
-                              <Trash2 size={16} />
-                            </button>
-                          )}
-                        </div>
-                        {circuito.ejercicios.map((ej, ejIdx) => {
-                          const plantilla = getPlantillaById(plantillas, ej.ejercicio_plantilla_id);
-                          return (
-                            <div
-                              key={ejIdx}
-                              className="border border-gray-200 rounded-lg p-3 bg-white"
-                            >
-                              <div className="flex items-center justify-between mb-2">
-                                <span className="font-medium text-gray-900">
-                                  {plantilla?.nombre ?? 'Ejercicio'}
-                                </span>
-                                <button
-                                  type="button"
-                                  onClick={() => removeEjercicioDeCircuito(dia, circuitIdx, ejIdx)}
-                                  className="text-red-600 hover:text-red-700 p-1"
-                                >
-                                  <Trash2 size={16} />
-                                </button>
-                              </div>
-                              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                                {Array.from({ length: semanas }, (_, i) => i + 1).map((sem) => (
-                                  <div key={sem} className="text-xs border border-gray-200 rounded-lg p-2 bg-gray-50">
-                                    <span className="block text-gray-600 font-medium mb-2">Sem {sem}</span>
-                                    <div className="space-y-1.5">
-                                      <div>
-                                        <label className="block text-gray-500 mb-0.5">Series</label>
-                                        <input
-                                          type="number"
-                                          min={1}
-                                          value={ej.config_por_semana[sem]?.series ?? plantilla?.series_default ?? 3}
-                                          onChange={(e) =>
-                                            updateConfigSemana(dia, circuitIdx, ejIdx, sem, 'series', Number(e.target.value) || 1)
-                                          }
-                                          className="w-full px-2 py-1 border rounded text-sm"
-                                        />
-                                      </div>
-                                      <div>
-                                        <label className="block text-gray-500 mb-0.5">Repeticiones</label>
-                                        <input
-                                          type="number"
-                                          min={1}
-                                          value={ej.config_por_semana[sem]?.repeticiones ?? plantilla?.repeticiones_default ?? 10}
-                                          onChange={(e) =>
-                                            updateConfigSemana(dia, circuitIdx, ejIdx, sem, 'repeticiones', Number(e.target.value) || 1)
-                                          }
-                                          className="w-full px-2 py-1 border rounded text-sm"
-                                        />
-                                      </div>
-                                      <div>
-                                        <label className="block text-gray-500 mb-0.5">RIR</label>
-                                        <input
-                                          type="number"
-                                          min={0}
-                                          value={ej.config_por_semana[sem]?.rir ?? plantilla?.rir_default ?? 2}
-                                          onChange={(e) =>
-                                            updateConfigSemana(dia, circuitIdx, ejIdx, sem, 'rir', Number(e.target.value) || 0)
-                                          }
-                                          className="w-full px-2 py-1 border rounded text-sm"
-                                        />
-                                      </div>
-                                      <div>
-                                        <label className="block text-gray-500 mb-0.5">Nota (opcional)</label>
-                                        <input
-                                          type="text"
-                                          value={ej.config_por_semana[sem]?.nota ?? ''}
-                                          onChange={(e) =>
-                                            updateConfigSemana(dia, circuitIdx, ejIdx, sem, 'nota', e.target.value)
-                                          }
-                                          placeholder="Ej: subir peso..."
-                                          className="w-full px-2 py-1 border rounded text-sm"
-                                        />
-                                      </div>
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          );
-                        })}
-                        {plantillas.length > 0 && (
-                          <div className="flex gap-2">
-                            <select
-                              id={`add-${dia}-${circuitIdx}`}
-                              className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm"
-                            >
-                              <option value="">Agregar ejercicio a este circuito...</option>
-                              {plantillas.map((p) => (
-                                <option key={p.id} value={p.id}>{p.nombre}</option>
-                              ))}
-                            </select>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const sel = document.getElementById(`add-${dia}-${circuitIdx}`) as HTMLSelectElement;
-                                const val = sel?.value;
-                                if (val) {
-                                  addEjercicioACircuito(dia, circuitIdx, val);
-                                  sel.value = '';
-                                }
-                              }}
-                              className="px-4 py-2 bg-sanmartin-red text-white rounded-lg hover:bg-red-700 text-sm font-medium"
-                            >
-                              <Plus size={18} />
-                            </button>
-                          </div>
-                        )}
-                      </div>
+                      <CircuitoBloque
+                        key={circuitIdx}
+                        circuito={circuito}
+                        circuitIdx={circuitIdx}
+                        dia={dia}
+                        canRemoveCircuito={(dc.circuitos?.length ?? 1) > 1}
+                        plantillas={plantillas}
+                        semanas={semanas}
+                        gruposMusculares={gruposMusculares}
+                        addSelectorTipo={addSelectorByCircuit[`${dia}-${circuitIdx}`]?.tipo ?? ''}
+                        addSelectorEjercicio={addSelectorByCircuit[`${dia}-${circuitIdx}`]?.ejercicio ?? ''}
+                        onCircuitoNombre={(nombre) => setCircuitoNombre(dia, circuitIdx, nombre)}
+                        onRemoveCircuito={() => removeCircuito(dia, circuitIdx)}
+                        onAddEjercicio={(plantillaId) => {
+                          addEjercicioACircuito(dia, circuitIdx, plantillaId);
+                          setAddSelectorByCircuit((prev) => {
+                            const next = { ...prev };
+                            delete next[`${dia}-${circuitIdx}`];
+                            return next;
+                          });
+                        }}
+                        onRemoveEjercicio={(ejIdx) => removeEjercicioDeCircuito(dia, circuitIdx, ejIdx)}
+                        onUpdateConfigSemana={(ejIdx, sem, field, value) =>
+                          updateConfigSemana(dia, circuitIdx, ejIdx, sem, field, value)
+                        }
+                        onAddSelectorChange={(tipo, ejercicio) =>
+                          setAddSelectorByCircuit((prev) => ({
+                            ...prev,
+                            [`${dia}-${circuitIdx}`]: { tipo, ejercicio },
+                          }))
+                        }
+                      />
                     ))}
                     <div className="flex gap-2">
                       <button
@@ -623,28 +421,19 @@ export default function RutinaForm({
                       </button>
                     </div>
                   </div>
-                )}
-              </div>
+                </RutinaDiaBloque>
             );
           })}
         </div>
       </div>
 
       <div className="flex gap-3">
-        <button
-          type="submit"
-          disabled={loading}
-          className="flex-1 py-3 bg-sanmartin-red text-white font-semibold rounded-xl hover:bg-red-700 disabled:opacity-50 transition"
-        >
+        <Button type="submit" disabled={loading} className="flex-1 py-3">
           {loading ? 'Guardando...' : rutina ? 'Actualizar rutina' : 'Crear rutina'}
-        </button>
-        <button
-          type="button"
-          onClick={() => router.back()}
-          className="px-6 py-3 border border-gray-300 rounded-xl text-gray-700 hover:bg-gray-50 transition"
-        >
+        </Button>
+        <Button type="button" variant="secondary" onClick={() => router.back()} className="px-6 py-3">
           Cancelar
-        </button>
+        </Button>
       </div>
     </form>
   );

@@ -31,6 +31,7 @@
 | F-JUG-02 | Crear jugador | El staff puede dar de alta jugadores con: DNI (7-8 dígitos), nombre, fecha de nacimiento (YYYY-MM-DD), categoría. | Alta |
 | F-JUG-03 | Categoría obligatoria | Cada jugador debe tener una categoría asignada para acceder a su rutina. | Alta |
 | F-JUG-04 | Validación DNI único | No se permiten DNI duplicados. | Alta |
+| F-JUG-05 | Vista de rendimiento y reporte | El staff puede ver por jugador: asistencia, pesos en el tiempo, RM relativa; y generar reporte descargable (imprimir/PDF) con la misma estética (resumen en cards, métricas, evolución). | Alta |
 
 ### Gestión de categorías (Staff)
 | ID | Requisito | Descripción | Prioridad |

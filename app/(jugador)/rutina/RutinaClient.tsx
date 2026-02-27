@@ -1,13 +1,13 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { Rutina, EjercicioConAyuda } from '@/lib/redis';
+import { Rutina, EjercicioConAyuda, type TipoDia } from '@/lib/redis';
 import DiaSelector from './DiaSelector';
 import PesoForm from './PesoForm';
 import EscalaRPE from './EscalaRPE';
 import CuestionarioWellness from './CuestionarioWellness';
 import ComentarioJugadorModal from './ComentarioJugadorModal';
-import { Heart, MessageSquare, ChevronDown, ChevronUp } from 'lucide-react';
+import { Heart, MessageSquare, ChevronDown, ChevronUp, Trophy, Moon } from 'lucide-react';
 import MovilidadReady from './MovilidadReady';
 
 /** Agrupa ejercicios por circuito_nombre preservando el orden del día */
@@ -30,23 +30,44 @@ interface RutinaClientProps {
   ejercicios: EjercicioConAyuda[];
   dias: string[];
   diaActual: string;
+  /** Día de la semana actual (para marcar "Hoy" en el selector) */
+  diaHoy?: string;
+  /** partido | descanso | ejercicio: qué toca hoy según la rutina */
+  tipoDiaActual?: TipoDia;
   semanaActual?: number;
   sugerenciasPeso?: Record<string, number>;
   /** null = no completó hoy (mostrar cuestionario opcional); number = score del día */
   wellnessScore?: number | null;
   wellnessBajo?: boolean;
+  /** Si true, no se muestran ejercicios ni "Omitir" hasta completar wellness del día */
+  wellnessObligatorio?: boolean;
 }
 
-export default function RutinaClient({ rutina, ejercicios, dias, diaActual, semanaActual, sugerenciasPeso = {}, wellnessScore = null, wellnessBajo = false }: RutinaClientProps) {
+export default function RutinaClient({ rutina, ejercicios, dias, diaActual, diaHoy, tipoDiaActual = 'ejercicio', semanaActual, sugerenciasPeso = {}, wellnessScore = null, wellnessBajo = false, wellnessObligatorio = false }: RutinaClientProps) {
   const [comentarioEjercicioId, setComentarioEjercicioId] = useState<string | null>(null);
   const [wellnessExpandido, setWellnessExpandido] = useState(true);
   const [wellnessOmitido, setWellnessOmitido] = useState(false);
   const gruposCircuito = useMemo(() => agruparPorCircuito(ejercicios), [ejercicios]);
 
+  // Wellness obligatorio: sin completar hoy solo se muestra el cuestionario (sin Omitir ni ejercicios)
+  if (wellnessObligatorio && wellnessScore == null) {
+    return (
+      <div className="p-4 space-y-4">
+        <div className="bg-white rounded-xl shadow-md p-6">
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">{rutina.nombre}</h1>
+          <p className="text-sm text-gray-600 mb-4">
+            Completá el cuestionario wellness para ver tu rutina del día.
+          </p>
+          <CuestionarioWellness />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="p-4 space-y-4">
-      {/* Cuestionario wellness (opcional): si no completó, mostrar con opción de omitir */}
-      {wellnessScore == null && !wellnessOmitido && (
+      {/* Cuestionario wellness (opcional): si no completó y no es obligatorio, mostrar con opción de omitir */}
+      {!wellnessObligatorio && wellnessScore == null && !wellnessOmitido && (
         <div className="bg-white rounded-xl shadow-md overflow-hidden">
           <button
             type="button"
@@ -99,14 +120,43 @@ export default function RutinaClient({ rutina, ejercicios, dias, diaActual, sema
         )}
       </div>
 
-      <DiaSelector dias={dias} diaActual={diaActual} />
+      <div className="space-y-2">
+        <p className="text-sm text-gray-600">
+          Elegí qué día de la rutina hacer. Podés elegir otro día para recuperar o si necesitás cambiar el orden.
+        </p>
+        <DiaSelector dias={dias} diaActual={diaActual} diaHoy={diaHoy} />
+      </div>
+
+      {/* Día de partido o descanso: mensaje claro */}
+      {tipoDiaActual === 'partido' && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-6 flex items-center gap-4">
+          <div className="bg-amber-100 p-3 rounded-full">
+            <Trophy className="text-amber-700" size={32} />
+          </div>
+          <div>
+            <h2 className="text-xl font-bold text-amber-900">Día de partido</h2>
+            <p className="text-amber-800 mt-1">Hoy toca partido. Descansá y preparate.</p>
+          </div>
+        </div>
+      )}
+      {tipoDiaActual === 'descanso' && (
+        <div className="bg-slate-50 border border-slate-200 rounded-xl p-6 flex items-center gap-4">
+          <div className="bg-slate-200 p-3 rounded-full">
+            <Moon className="text-slate-600" size={32} />
+          </div>
+          <div>
+            <h2 className="text-xl font-bold text-slate-800">Día de descanso</h2>
+            <p className="text-slate-600 mt-1">Hoy es descanso. Recuperate bien.</p>
+          </div>
+        </div>
+      )}
 
       <div className="space-y-4">
-        {ejercicios.length === 0 ? (
+        {tipoDiaActual === 'ejercicio' && ejercicios.length === 0 ? (
           <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
             <p className="text-yellow-800">No hay ejercicios para este día</p>
           </div>
-        ) : (
+        ) : tipoDiaActual === 'ejercicio' ? (
           gruposCircuito.map((grupo, grupoIdx) => (
             <div key={grupoIdx} className="space-y-4">
               {grupo.nombre && (
@@ -179,7 +229,7 @@ export default function RutinaClient({ rutina, ejercicios, dias, diaActual, sema
               })}
             </div>
           ))
-        )}
+        ) : null}
       </div>
 
       {/* Modal comentario jugador */}

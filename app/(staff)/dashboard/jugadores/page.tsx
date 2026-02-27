@@ -2,6 +2,7 @@ import { getJugadores, getAllCategorias } from '@/lib/redis';
 import Link from 'next/link';
 import { TrendingUp, Layers } from 'lucide-react';
 import JugadorForm from './JugadorForm';
+import JugadorActivoToggle from './JugadorActivoToggle';
 import type { Usuario } from '@/lib/redis';
 
 function formatFecha(fecha?: string) {
@@ -52,6 +53,7 @@ export default async function JugadoresPage() {
                   <th className="py-2 pr-4">Nombre</th>
                   <th className="py-2 pr-4">Fecha nac.</th>
                   <th className="py-2 pr-4">Categoría</th>
+                  <th className="py-2 pr-4">Estado</th>
                   <th className="py-2 text-right">Acciones</th>
                 </tr>
               </thead>
@@ -62,6 +64,9 @@ export default async function JugadoresPage() {
                     <td className="py-3 pr-4 font-medium">{j.nombre}</td>
                     <td className="py-3 pr-4">{formatFecha(j.fecha_nacimiento)}</td>
                     <td className="py-3 pr-4">{j.categoria_id ? categoriasMap[j.categoria_id] ?? j.categoria_id : '-'}</td>
+                    <td className="py-3 pr-4">
+                      <JugadorActivoToggle jugadorId={j.id} activo={j.activo ?? true} />
+                    </td>
                     <td className="py-3 text-right">
                       <Link
                         href={`/dashboard/jugadores/${j.id}/rendimiento`}

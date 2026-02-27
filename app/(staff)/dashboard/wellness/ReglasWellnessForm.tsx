@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Heart, Plus, Trash2 } from 'lucide-react';
 import type { ReglaWellness } from '@/lib/redis';
+import ErrorMessage from '@/components/ui/ErrorMessage';
 
 interface ReglasWellnessFormProps {
   reglasIniciales: ReglaWellness[];
@@ -157,7 +158,7 @@ export default function ReglasWellnessForm({ reglasIniciales }: ReglasWellnessFo
         </button>
       </div>
 
-      {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
+      <ErrorMessage message={error} />
       {mensaje && <p className="mt-3 text-sm text-green-600">{mensaje}</p>}
     </div>
   );

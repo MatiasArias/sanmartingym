@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Categoria } from '@/lib/redis';
+import { DNI_MIN_LENGTH, DNI_MAX_LENGTH } from '@/lib/constants';
+import ErrorMessage from '@/components/ui/ErrorMessage';
 
 interface JugadorFormProps {
   categorias: Categoria[];
@@ -30,8 +32,8 @@ export default function JugadorForm({ categorias }: JugadorFormProps) {
     }
 
     const dniLimpio = dni.replace(/\D/g, '');
-    if (dniLimpio.length < 7 || dniLimpio.length > 8) {
-      setError('DNI debe tener 7 u 8 dígitos');
+    if (dniLimpio.length < DNI_MIN_LENGTH || dniLimpio.length > DNI_MAX_LENGTH) {
+      setError(`DNI debe tener ${DNI_MIN_LENGTH} u ${DNI_MAX_LENGTH} dígitos`);
       return;
     }
 
@@ -71,11 +73,7 @@ export default function JugadorForm({ categorias }: JugadorFormProps) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <p className="text-red-800 text-sm">{error}</p>
-        </div>
-      )}
+      <ErrorMessage message={error} />
       {success && (
         <div className="bg-green-50 border border-green-200 rounded-lg p-4">
           <p className="text-green-800 text-sm">Jugador cargado correctamente. Ya puede ingresar con su DNI.</p>

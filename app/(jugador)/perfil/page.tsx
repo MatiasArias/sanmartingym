@@ -1,22 +1,29 @@
-'use client';
+import { getTokenPayload } from '@/lib/auth';
+import { redirect } from 'next/navigation';
+import { getUsuarioById, getAllCategorias } from '@/lib/redis';
+import { User } from 'lucide-react';
+import PerfilLogoutButton from './PerfilLogoutButton';
 
-import { useRouter } from 'next/navigation';
-import { LogOut, User } from 'lucide-react';
-import { useEffect, useState } from 'react';
+function enmascararDni(dni: string): string {
+  if (!dni || dni.length < 4) return '•••';
+  return dni.slice(0, 2) + '••••••' + dni.slice(-2);
+}
 
-export default function PerfilPage() {
-  const router = useRouter();
-  const [usuario, setUsuario] = useState<any>(null);
+export default async function PerfilPage() {
+  const payload = await getTokenPayload();
+  if (!payload || payload.rol !== 'jugador') {
+    redirect('/login');
+  }
 
-  useEffect(() => {
-    // Get user info from a hypothetical endpoint or stored state
-    // For now, we'll just show a placeholder
-  }, []);
+  const usuario = await getUsuarioById(payload.id as string);
+  if (!usuario) {
+    redirect('/login');
+  }
 
-  const handleLogout = async () => {
-    await fetch('/api/auth/logout', { method: 'POST' });
-    router.push('/login');
-  };
+  const categorias = await getAllCategorias();
+  const categoriaNombre = usuario.categoria_id
+    ? categorias.find((c) => c.id === usuario.categoria_id)?.nombre ?? usuario.categoria_id
+    : null;
 
   return (
     <div className="p-4 space-y-4">
@@ -33,24 +40,41 @@ export default function PerfilPage() {
 
         <div className="space-y-4">
           <div className="border-b pb-3">
-            <label className="text-sm text-gray-600">Rol</label>
-            <p className="font-semibold text-gray-900">Jugador</p>
+            <label className="text-sm text-gray-600">Nombre</label>
+            <p className="font-semibold text-gray-900">{usuario.nombre}</p>
           </div>
-
+          <div className="border-b pb-3">
+            <label className="text-sm text-gray-600">DNI</label>
+            <p className="font-semibold text-gray-900">{enmascararDni(usuario.dni)}</p>
+          </div>
+          {categoriaNombre && (
+            <div className="border-b pb-3">
+              <label className="text-sm text-gray-600">Categoría</label>
+              <p className="font-semibold text-gray-900">{categoriaNombre}</p>
+            </div>
+          )}
+          {usuario.fecha_nacimiento && (
+            <div className="border-b pb-3">
+              <label className="text-sm text-gray-600">Fecha de nacimiento</label>
+              <p className="font-semibold text-gray-900">
+                {new Date(usuario.fecha_nacimiento + 'T12:00:00').toLocaleDateString('es-AR', {
+                  day: '2-digit',
+                  month: 'long',
+                  year: 'numeric',
+                })}
+              </p>
+            </div>
+          )}
           <div className="border-b pb-3">
             <label className="text-sm text-gray-600">Estado</label>
-            <p className="font-semibold text-green-600">Activo</p>
+            <p className={`font-semibold ${usuario.activo ? 'text-green-600' : 'text-gray-500'}`}>
+              {usuario.activo ? 'Activo' : 'Inactivo'}
+            </p>
           </div>
         </div>
       </div>
 
-      <button
-        onClick={handleLogout}
-        className="w-full flex items-center justify-center gap-2 bg-gray-800 hover:bg-gray-900 text-white font-semibold py-3 px-4 rounded-lg transition"
-      >
-        <LogOut size={20} />
-        Cerrar Sesión
-      </button>
+      <PerfilLogoutButton />
     </div>
   );
 }
