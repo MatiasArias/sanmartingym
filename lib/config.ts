@@ -7,11 +7,20 @@ const envSchema = z.object({
     .optional()
     .transform((v) => {
       const env = process.env.NODE_ENV ?? 'development';
-      if (env === 'development' && (!v || v.length < 32)) {
-        if (typeof process !== 'undefined' && process.env?.NODE_ENV !== 'test') {
-          console.warn('[config] JWT_SECRET no definido o corto en desarrollo; usando valor por defecto. Define JWT_SECRET en .env.local para producción.');
+      // Durante la fase de build de Next.js las rutas se analizan estáticamente
+      // pero no se ejecutan; permitir placeholder para no bloquear el build.
+      const isBuildPhase = process.env.NEXT_PHASE === 'phase-production-build';
+      if (isBuildPhase) {
+        return v ?? 'build-time-placeholder-not-used-at-runtime';
+      }
+      if (env === 'development' || env === 'test') {
+        if (!v || v.length < 32) {
+          if (env !== 'test') {
+            console.warn('[config] JWT_SECRET no definido o corto en desarrollo; usando valor por defecto. Define JWT_SECRET en .env.local para producción.');
+          }
+          return 'dev-only-secret-min-32-chars-do-not-use-in-prod';
         }
-        return 'dev-only-secret-min-32-chars-do-not-use-in-prod';
+        return v;
       }
       if (!v || v.length < 32) {
         throw new Error('JWT_SECRET debe tener al menos 32 caracteres por seguridad');
