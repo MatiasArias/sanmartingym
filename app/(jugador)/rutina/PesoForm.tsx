@@ -53,12 +53,14 @@ export default function PesoForm({ rutinaId, dia, ejercicioId, series: totalSeri
     [persistir]
   );
 
-  const actualizarPeso = useCallback(
-    (index: number, value: string) => {
-      setEstado((prev) => prev.map((s, i) => (i === index ? { ...s, peso: value } : s)));
-    },
-    []
-  );
+  /** Actualiza el peso de la serie y propaga ese valor a todas las series siguientes (el usuario puede modificar cualquier serie después). */
+  const actualizarPeso = useCallback((index: number, value: string) => {
+    setEstado((prev) =>
+      prev.map((s, i) =>
+        i === index || i > index ? { ...s, peso: value } : s
+      )
+    );
+  }, []);
 
   const guardarAlSalir = useCallback(
     (index: number) => {

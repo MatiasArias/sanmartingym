@@ -1,6 +1,7 @@
 import { getAllPlantillasEjercicio } from '@/lib/redis';
 import Link from 'next/link';
 import { Plus, Pencil } from 'lucide-react';
+import EmptyState from '@/components/ui/EmptyState';
 import type { EjercicioPlantilla } from '@/lib/redis';
 
 const TIPO_LABEL: Record<string, string> = {
@@ -35,15 +36,11 @@ export default async function EjerciciosPage() {
       </div>
 
       {ejercicios.length === 0 ? (
-        <div className="bg-white rounded-xl shadow-md p-6 text-center">
-          <p className="text-gray-500 mb-4">No hay ejercicios en el catálogo</p>
-          <Link
-            href="/dashboard/ejercicios/nuevo"
-            className="inline-flex items-center gap-2 text-sanmartin-red hover:underline"
-          >
-            Crear el primer ejercicio
-          </Link>
-        </div>
+        <EmptyState
+          message="No hay ejercicios en el catálogo."
+          actionLabel="Crear primer ejercicio"
+          actionHref="/dashboard/ejercicios/nuevo"
+        />
       ) : (
         <div className="space-y-3">
           {ejercicios.map((ej: EjercicioPlantilla) => (

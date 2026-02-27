@@ -1,7 +1,8 @@
 import { SignJWT, jwtVerify } from 'jose';
 import { cookies } from 'next/headers';
+import { jwtSecret } from '@/lib/config';
 
-const secret = new TextEncoder().encode(process.env.JWT_SECRET || 'fallback-secret-min-32-characters-long');
+const secret = new TextEncoder().encode(jwtSecret);
 
 export async function createToken(payload: any) {
   const token = await new SignJWT(payload)

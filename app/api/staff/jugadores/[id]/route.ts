@@ -4,7 +4,8 @@ import { getUsuarioById, updateUsuario } from '@/lib/redis';
 import { z } from 'zod';
 
 const bodySchema = z.object({
-  peso_kg: z.number().min(20).max(300).nullable(),
+  peso_kg: z.number().min(20).max(300).nullable().optional(),
+  activo: z.boolean().optional(),
 });
 
 export async function PATCH(
@@ -26,7 +27,11 @@ export async function PATCH(
     const body = await request.json();
     const data = bodySchema.parse(body);
 
-    const actualizado = { ...jugador, peso_kg: data.peso_kg ?? undefined };
+    const actualizado = {
+      ...jugador,
+      ...(data.peso_kg !== undefined && { peso_kg: data.peso_kg ?? undefined }),
+      ...(data.activo !== undefined && { activo: data.activo }),
+    };
     await updateUsuario(actualizado);
 
     return NextResponse.json({ jugador: actualizado });

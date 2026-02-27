@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getTokenPayload } from '@/lib/auth';
+import { getFechaHoyArgentina } from '@/lib/fecha';
 import { redis, type RegistroCarga } from '@/lib/redis';
 import { z } from 'zod';
 
@@ -30,7 +31,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { registros: items, fecha: fechaParam } = sesionSchema.parse(body);
 
-    const fecha = fechaParam ?? new Date().toISOString().split('T')[0];
+    const fecha = fechaParam ?? getFechaHoyArgentina();
     const usuarioId = payload.id as string;
     const key = `registros:jugador:${usuarioId}`;
 

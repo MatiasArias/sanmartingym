@@ -1,7 +1,7 @@
 import { getTokenPayload } from '@/lib/auth';
 import { getEjerciciosConRegistros } from '@/lib/redis';
 import Link from 'next/link';
-import { TrendingUp, Dumbbell } from 'lucide-react';
+import { TrendingUp, Dumbbell, BarChart3, ChevronRight } from 'lucide-react';
 import CalculadoraPeso from './CalculadoraPeso';
 
 export default async function ProgresoPage() {
@@ -17,6 +17,24 @@ export default async function ProgresoPage() {
         </div>
         <p className="text-gray-600">Historial de ejercicios completados</p>
       </div>
+
+      <Link
+        href="/estadisticas"
+        className="flex items-center justify-between bg-white rounded-xl shadow-md border-l-4 border-sanmartin-red p-4 hover:shadow-lg transition"
+      >
+        <div className="flex items-center gap-4">
+          <div className="bg-red-100 p-3 rounded-full">
+            <BarChart3 className="text-sanmartin-red" size={24} />
+          </div>
+          <div>
+            <h3 className="font-bold text-gray-900">Mis estadísticas</h3>
+            <p className="text-sm text-gray-600">
+              Asistencia, wellness, RPE y evolución por semana o por mes
+            </p>
+          </div>
+        </div>
+        <ChevronRight className="text-gray-400 shrink-0" size={22} />
+      </Link>
 
       <CalculadoraPeso />
 

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { GlobalFetchLoading } from "@/components/GlobalFetchLoading";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 export const metadata: Metadata = {
   title: "San Martín Gym",
@@ -31,6 +32,7 @@ export default function RootLayout({
       <body>
         <GlobalFetchLoading />
         {children}
+        <SpeedInsights />
       </body>
     </html>
   );

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getTokenPayload } from '@/lib/auth';
+import { getFechaHoyArgentina } from '@/lib/fecha';
 import { saveRpeSesion } from '@/lib/redis';
 import { z } from 'zod';
 
@@ -19,7 +20,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const data = rpeSchema.parse(body);
 
-    const fecha = new Date().toISOString().split('T')[0];
+    const fecha = getFechaHoyArgentina();
     await saveRpeSesion({
       usuario_id: payload.id as string,
       fecha,

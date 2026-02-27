@@ -1,4 +1,5 @@
 import { getUsuarioById, getAllCategorias } from '@/lib/redis';
+import { config } from '@/lib/config';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
@@ -23,25 +24,24 @@ export default async function RendimientoJugadorPage({
   const categoriaNombre = jugador.categoria_id ? categoriasMap[jugador.categoria_id] ?? jugador.categoria_id : null;
 
   return (
-    <div className="p-4 space-y-4">
-      <div className="flex items-center gap-3">
+    <div className="min-h-screen bg-gray-50">
+      <div className="p-4 md:p-6 space-y-6">
         <Link
           href="/dashboard/jugadores"
-          className="p-2 rounded-lg hover:bg-gray-200 text-gray-700"
+          className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-sanmartin-red"
           aria-label="Volver a jugadores"
         >
-          <ArrowLeft size={20} />
+          <ArrowLeft size={18} />
+          Volver a jugadores
         </Link>
-        <div>
-          <h1 className="text-xl font-bold text-gray-900">Rendimiento</h1>
-          <p className="text-sm text-gray-600">
-            {jugador.nombre}
-            {categoriaNombre && ` · ${categoriaNombre}`}
-          </p>
-        </div>
-      </div>
 
-      <RendimientoClient jugadorId={id} jugadorNombre={jugador.nombre} />
+        <RendimientoClient
+          jugadorId={id}
+          jugadorNombre={jugador.nombre}
+          categoriaNombre={categoriaNombre ?? null}
+          reportePdfHabilitado={config.reportePdfHabilitado ?? true}
+        />
+      </div>
     </div>
   );
 }

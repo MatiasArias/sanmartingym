@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getTokenPayload } from '@/lib/auth';
+import { getFechaHoyArgentina } from '@/lib/fecha';
 import { redis } from '@/lib/redis';
 import { z } from 'zod';
 
@@ -27,7 +28,7 @@ export async function POST(request: NextRequest) {
       peso: data.peso,
       reps: data.reps,
       serie_num: data.serie_num,
-      fecha: new Date().toISOString().split('T')[0],
+      fecha: getFechaHoyArgentina(),
       timestamp: new Date().toISOString(),
     };
 

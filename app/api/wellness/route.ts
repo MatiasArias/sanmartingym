@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getTokenPayload } from '@/lib/auth';
+import { getFechaHoyArgentina } from '@/lib/fecha';
 import { saveWellnessSesion } from '@/lib/redis';
 import { z } from 'zod';
 
@@ -38,7 +39,7 @@ export async function POST(request: NextRequest) {
 
     const score = Math.max(0, Math.min(25, calcularScore025(respuestas)));
 
-    const fecha = new Date().toISOString().split('T')[0];
+    const fecha = getFechaHoyArgentina();
     await saveWellnessSesion({
       usuario_id: payload.id as string,
       fecha,

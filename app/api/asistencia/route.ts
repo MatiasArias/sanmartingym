@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getTokenPayload } from '@/lib/auth';
+import { getFechaHoyArgentina, getMesAnioHoyArgentina } from '@/lib/fecha';
 import { redis, getUsuarioById, getRutinaActivaByCategoria } from '@/lib/redis';
 
 const DIA_SEMANA = ['domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'] as const;
@@ -41,8 +42,9 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
-    const mes = parseInt(searchParams.get('mes') ?? String(new Date().getMonth() + 1), 10);
-    const anio = parseInt(searchParams.get('anio') ?? String(new Date().getFullYear()), 10);
+    const { mes: mesHoy, anio: anioHoy } = getMesAnioHoyArgentina();
+    const mes = parseInt(searchParams.get('mes') ?? String(mesHoy), 10);
+    const anio = parseInt(searchParams.get('anio') ?? String(anioHoy), 10);
 
     const usuario = await getUsuarioById(payload.id as string);
     if (!usuario?.categoria_id) {
@@ -94,7 +96,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
 
-    const fecha = new Date().toISOString().split('T')[0];
+    const fecha = getFechaHoyArgentina();
     const asistenciaId = `asistencia:${payload.id}:${fecha}`;
 
     // Check if already marked
@@ -107,7 +109,7 @@ export async function POST(request: NextRequest) {
       id: asistenciaId,
       usuario_id: payload.id as string,
       fecha,
-      timestamp: new Date().toISOString(),
+      timestamp: new Date().toISOString(), // ISO en UTC para auditoría; la fecha del día es Argentina
     };
 
     await redis.set(asistenciaId, asistencia);

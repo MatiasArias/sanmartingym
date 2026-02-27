@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { EjercicioPlantilla } from '@/lib/redis';
+import { MUSCULOS_DEFAULT } from '@/lib/constants';
+import ErrorMessage from '@/components/ui/ErrorMessage';
 
 const TIPOS = [
   { value: 'empuje', label: 'Empuje' },
@@ -14,11 +16,6 @@ const MODOS_SERIE = [
   { value: 'serie_x_repeticion', label: 'Series × Repetición' },
   { value: 'serie_x_minutos', label: 'Series × Minutos' },
   { value: 'serie_x_brazo', label: 'Series × Brazo' },
-];
-
-const MUSCULOS = [
-  'Cuádriceps', 'Isquiotibiales', 'Glúteos', 'Pectorales', 'Dorsales',
-  'Hombros', 'Bíceps', 'Tríceps', 'Core', 'Gemelos', 'Otro',
 ];
 
 interface EjercicioFormProps {
@@ -40,7 +37,7 @@ export default function EjercicioForm({ ejercicio }: EjercicioFormProps) {
     ejercicio?.tipo ?? 'empuje'
   );
   const [musculoPrincipal, setMusculoPrincipal] = useState(
-    ejercicio?.musculo_principal ?? MUSCULOS[0]
+    ejercicio?.musculo_principal ?? MUSCULOS_DEFAULT[0]
   );
   const [modoSerie, setModoSerie] = useState(ejercicio?.modo_serie ?? 'serie_x_repeticion');
   const [ayudaAlumno, setAyudaAlumno] = useState(ejercicio?.ayuda_alumno ?? '');
@@ -99,11 +96,7 @@ export default function EjercicioForm({ ejercicio }: EjercicioFormProps) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <p className="text-red-800 text-sm">{error}</p>
-        </div>
-      )}
+      <ErrorMessage message={error} />
 
       <div className="bg-white rounded-xl shadow-md p-6 space-y-4">
         <div>
@@ -180,7 +173,7 @@ export default function EjercicioForm({ ejercicio }: EjercicioFormProps) {
             onChange={(e) => setMusculoPrincipal(e.target.value)}
             className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-sanmartin-red focus:border-transparent"
           >
-            {MUSCULOS.map((m) => (
+            {MUSCULOS_DEFAULT.map((m) => (
               <option key={m} value={m}>
                 {m}
               </option>

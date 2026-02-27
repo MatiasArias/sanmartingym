@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getTokenPayload } from '@/lib/auth';
+import { getFechaHoyArgentina, getMesAnioHoyArgentina } from '@/lib/fecha';
 import { getAllUsuarios, redis, getRpeSesion } from '@/lib/redis';
 
 /** Días del mes (1-28/29/30/31) para un año dado */
@@ -22,14 +23,14 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const vista = searchParams.get('vista') || 'dia'; // 'dia' | 'mes'
-    const fecha = searchParams.get('fecha') || new Date().toISOString().split('T')[0];
+    const { mes: mesHoy, anio: anioHoy } = getMesAnioHoyArgentina();
+    const fecha = searchParams.get('fecha') || getFechaHoyArgentina();
     const mesParam = searchParams.get('mes');
     const anioParam = searchParams.get('anio');
     const categoriaId = searchParams.get('categoria');
 
-    const hoy = new Date();
-    const mes = mesParam ? parseInt(mesParam, 10) : hoy.getMonth() + 1;
-    const anio = anioParam ? parseInt(anioParam, 10) : hoy.getFullYear();
+    const mes = mesParam ? parseInt(mesParam, 10) : mesHoy;
+    const anio = anioParam ? parseInt(anioParam, 10) : anioHoy;
 
     let jugadores = (await getAllUsuarios()).filter(u => u.rol === 'jugador' && u.activo);
 

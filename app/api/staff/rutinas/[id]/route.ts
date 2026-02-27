@@ -6,6 +6,7 @@ import {
   saveEjerciciosForRutina,
   getAllCategorias,
 } from '@/lib/redis';
+import { RUTINA_SEMANAS_MIN, RUTINA_SEMANAS_MAX } from '@/lib/constants';
 import { z } from 'zod';
 
 const DIAS_VALIDOS = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'] as const;
@@ -13,6 +14,7 @@ const TIPOS_DIA = ['partido', 'descanso', 'ejercicio'] as const;
 
 const configSemanaSchema = z.object({
   series: z.number().int().min(1),
+  repeticiones: z.number().int().min(1).optional(),
   rir: z.number().int().min(0),
   nota: z.string().optional(),
 });
@@ -30,7 +32,7 @@ const bodySchema = z.object({
   categoria_id: z.string().min(1),
   nombre: z.string().min(1),
   fecha_inicio: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  semanas: z.number().int().min(1).default(4),
+  semanas: z.number().int().min(RUTINA_SEMANAS_MIN).max(RUTINA_SEMANAS_MAX).default(4),
   dias_config: z.record(z.enum(DIAS_VALIDOS), z.enum(TIPOS_DIA)).optional(),
   ejercicios: z.array(ejercicioSchema).default([]),
 });

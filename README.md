@@ -9,12 +9,20 @@
 
 El repositorio solo debe incluir `.env.example` con placeholders (sin contraseñas ni URLs reales).
 
+## Configuración centralizada
+
+La app usa `lib/config.ts` para cargar variables de entorno validadas con Zod:
+
+- **JWT_SECRET** (obligatorio): mínimo 32 caracteres. Si falta o está vacío, la aplicación lanza error al importar (no hay valor por defecto por seguridad). También es necesario para `npm run build` (en CI, configurá una variable de entorno con un valor de al menos 32 caracteres).
+- **REDIS_URL** o **SANMARTIN_REDIS_URL**: URL de Redis; obligatoria cuando se usan rutas o scripts que conectan a Redis.
+- Opcionales: `APP_NAME`, `WELLNESS_OBLIGATORIO`, `REPORTE_PDF_HABILITADO` (ver `.env.example`).
+
 ## Desarrollo local
 
 ```bash
 npm install
 cp .env.example .env.local
-# Editar .env.local: REDIS_URL (redis://...) y JWT_SECRET
+# Editar .env.local: REDIS_URL (o SANMARTIN_REDIS_URL) y JWT_SECRET (mín. 32 caracteres)
 npm run dev
 ```
 

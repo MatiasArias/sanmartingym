@@ -3,6 +3,10 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
+import ErrorMessage from '@/components/ui/ErrorMessage';
+import Input from '@/components/ui/Input';
+import Button from '@/components/ui/Button';
+import { DNI_MIN_LENGTH, DNI_MAX_LENGTH } from '@/lib/constants';
 
 export default function LoginPage() {
   const [dni, setDni] = useState('');
@@ -22,19 +26,19 @@ export default function LoginPage() {
         body: JSON.stringify({ dni }),
       });
 
+      const data = await res.json();
       if (!res.ok) {
-        throw new Error('DNI no encontrado');
+        setError(data.error || 'DNI no encontrado o inactivo');
+        return;
       }
 
-      const data = await res.json();
-      
-      if (data.usuario.rol === 'jugador') {
+      if (data.usuario?.rol === 'jugador') {
         router.push('/home');
       } else {
         router.push('/dashboard');
       }
-    } catch (err) {
-      setError('DNI no encontrado o inactivo');
+    } catch {
+      setError('Error de conexión. Intentá de nuevo.');
     } finally {
       setLoading(false);
     }
@@ -64,36 +68,23 @@ export default function LoginPage() {
           </p>
 
           <form onSubmit={handleSubmit} className="space-y-6">
-            <div>
-              <label htmlFor="dni" className="block text-sm font-medium text-gray-700 mb-2">
-                DNI
-              </label>
-              <input
-                type="text"
-                id="dni"
-                value={dni}
-                onChange={(e) => setDni(e.target.value)}
-                placeholder="Ingresá tu DNI"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sanmartin-red focus:border-transparent transition"
-                required
-                minLength={7}
-                maxLength={8}
-              />
-            </div>
+            <Input
+              label="DNI"
+              id="dni"
+              type="text"
+              value={dni}
+              onChange={(e) => setDni(e.target.value)}
+              placeholder="Ingresá tu DNI"
+              required
+              minLength={DNI_MIN_LENGTH}
+              maxLength={DNI_MAX_LENGTH}
+            />
 
-            {error && (
-              <div className="bg-red-50 text-red-600 px-4 py-3 rounded-lg text-sm">
-                {error}
-              </div>
-            )}
+            <ErrorMessage message={error} />
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-sanmartin-red hover:bg-red-700 text-white font-semibold py-3 px-4 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
-            >
+            <Button type="submit" disabled={loading} className="w-full py-3">
               {loading ? 'Ingresando...' : 'Ingresar'}
-            </button>
+            </Button>
           </form>
         </div>
       </div>
