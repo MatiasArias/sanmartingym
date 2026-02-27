@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { Plus, FileBarChart2, Pencil, CheckCircle2, XCircle } from 'lucide-react';
 import type { Lesion } from '@/lib/lesiones';
-import { MUSCULOS_LESION, CONTEXTOS_LESION, TIPOS_LESION } from '@/lib/lesiones';
+import { MUSCULOS_LESION, CONTEXTOS_LESION, TIPOS_LESION } from '@/lib/lesiones-constants';
 import type { Usuario } from '@/lib/redis';
 
 type Filtro = 'activas' | 'todas';

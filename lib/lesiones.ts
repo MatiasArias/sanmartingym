@@ -1,38 +1,12 @@
 import { redis } from '@/lib/redis-client';
-
-// ─── Listas cerradas ───────────────────────────────────────────────────────────
-
-export const MUSCULOS_LESION = [
-  'Cuádriceps',
-  'Isquiotibiales',
-  'Glúteos',
-  'Gemelos',
-  'Aductores',
-  'Pectorales',
-  'Hombro',
-  'Codo',
-  'Muñeca',
-  'Lumbar',
-  'Cervical',
-  'Core',
-  'Otro',
-] as const;
-
-export const CONTEXTOS_LESION = ['Entrenamiento', 'Partido', 'Recuperación', 'Otro'] as const;
-
-export const TIPOS_LESION = [
-  'Esguince',
-  'Contractura',
-  'Desgarro',
-  'Tendinitis',
-  'Contusión',
-  'Sobrecarga',
-  'Otro',
-] as const;
-
-export type MusculoLesion = (typeof MUSCULOS_LESION)[number];
-export type ContextoLesion = (typeof CONTEXTOS_LESION)[number];
-export type TipoLesion = (typeof TIPOS_LESION)[number];
+export {
+  MUSCULOS_LESION,
+  CONTEXTOS_LESION,
+  TIPOS_LESION,
+  type MusculoLesion,
+  type ContextoLesion,
+  type TipoLesion,
+} from '@/lib/lesiones-constants';
 
 // ─── Modelo ───────────────────────────────────────────────────────────────────
 
