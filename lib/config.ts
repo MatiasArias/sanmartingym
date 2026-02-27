@@ -7,12 +7,6 @@ const envSchema = z.object({
     .optional()
     .transform((v) => {
       const env = process.env.NODE_ENV ?? 'development';
-      // Durante la fase de build de Next.js las rutas se analizan estáticamente
-      // pero no se ejecutan; permitir placeholder para no bloquear el build.
-      const isBuildPhase = process.env.NEXT_PHASE === 'phase-production-build';
-      if (isBuildPhase) {
-        return v ?? 'build-time-placeholder-not-used-at-runtime';
-      }
       if (env === 'development' || env === 'test') {
         if (!v || v.length < 32) {
           if (env !== 'test') {
@@ -41,6 +35,20 @@ const envSchema = z.object({
 });
 
 function getEnv() {
+  // Durante `next build` los módulos se evalúan estáticamente pero no se
+  // ejecutan requests reales; no validar vars de entorno para no bloquear el build.
+  if (process.env.NEXT_PHASE === 'phase-production-build') {
+    return {
+      NODE_ENV: 'production' as const,
+      JWT_SECRET: 'build-time-placeholder-not-used-at-runtime',
+      REDIS_URL: undefined as string | undefined,
+      SANMARTIN_REDIS_URL: undefined as string | undefined,
+      APP_NAME: 'San Martín Gym',
+      WELLNESS_OBLIGATORIO: false,
+      REPORTE_PDF_HABILITADO: true,
+    };
+  }
+
   const parsed = envSchema.safeParse({
     NODE_ENV: process.env.NODE_ENV,
     JWT_SECRET: process.env.JWT_SECRET,
